@@ -7,9 +7,17 @@ Game.country = ""
 Game.menuButton = nil
 local screenX, screenY = 1600, 1200
 
+--UI
 Game.uiState = "main"
 Game.industryButton = nil
 Game.closeButton = nil
+
+--Clock
+Game.timeCounter = 0
+Game.day = 1
+Game.week = 1
+Game.year = 1
+
 
 function Game.load(countryName, currencyName)
     Game.country = countryName
@@ -59,6 +67,26 @@ function Game.update(dt)
             Game.closeButton:update(mx, my)
         end
     end
+
+    -- Time simulation
+    Game.timeCounter = Game.timeCounter + dt
+
+    if Game.timeCounter >= 1 then
+        Game.timeCounter = Game.timeCounter - 1 -- remove 1 second
+        Game.day = Game.day + 1
+
+        if Game.day > 7 then
+            Game.day = 1
+            Game.week = Game.week + 1
+
+            -- Here you could call: Company:updateWeek() if you want automatic simulation per week
+        end
+
+        if Game.week > 52 then
+            Game.week = 1
+            Game.year = Game.year + 1
+        end
+    end
 end
 
 function Game.draw()
@@ -82,6 +110,10 @@ function Game.draw()
         -- Draw Close button
         if Game.closeButton then Game.closeButton:draw() end
     end
+
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf(" Day:  " .. Game.day .. "  Week:  " .. Game.week .. "  Year:  " .. Game.year, 0, 20, 1600 - 40, "right")
+
 end
 
 -- Helper function for thousands separator
@@ -94,6 +126,42 @@ function formatMoney(amount)
         if k == 0 then break end
     end
     return formatted
+end
+
+
+Company = {
+    employees = 100,
+    salary_per_employee = 100,
+    units_produced = 5000,
+    sale_price_per_unit = 5,
+    material_cost_per_unit = 1,
+    loan_balance = 1000000,
+    loan_interest_rate_per_week = 0.0018, -- 0.18% as decimal
+    assets_value = 6000000,
+    reserves_balance = 100000,
+
+    fixed_costs = 0, -- e.g. rent, utilities
+    asset_depreciation_rate_per_week = 0.001, -- 0.1%
+
+    -- Behavior targets
+    investment_allocation = 0.4,
+    shareholder_dividend_allocation = 0.2,
+    loan_repayment_allocation = 0.2,
+    reserves_allocation = 0.1,
+    wage_increase_allocation = 0.1,
+
+    -- Internal states
+    net_profit = 0,
+    revenue = 0,
+    total_costs = 0,
+}
+
+function Company:updateWeek()
+    self:calculateRevenue()
+    self:calculateCosts()
+    self:calculateNetProfit()
+    self:distributeProfit()
+    self:adjustStrategy()
 end
 
 
