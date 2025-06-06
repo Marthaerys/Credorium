@@ -1,12 +1,15 @@
 -- main.lua
 local Button = require("ui/button")
+local Game = require("game")
 
 local buttons = {}
+local startButton = nil
 local font
 local screenX = 1600
 local screenY = 1200
 
-local gamestate = "menu" 
+gamestate = "menu"
+
 
 local inputFields = {
     country = { text = "", active = false, y = 200 },
@@ -37,8 +40,19 @@ function love.update(dt)
         for _, btn in ipairs(buttons) do
             btn:update(mx, my)
         end
+    elseif gamestate == "country_select" then
+        if startButton then
+            local allFilled = inputFields.country.text ~= "" and inputFields.currency.text ~= ""
+            startButton.enabled = allFilled
+
+            local mx, my = love.mouse.getPosition()
+            startButton:update(mx, my)
+        end
+    elseif gamestate == "game" then
+        Game.update(dt)
     end
 end
+
 
 function love.draw()
     love.graphics.clear(0.1, 0.1, 0.1)
@@ -60,6 +74,19 @@ function love.draw()
 
         local currency = inputFields.currency.text ~= "" and inputFields.currency.text or "BUCKS"
         love.graphics.print("Starting capital: 1.000.000 " .. currency, 300, 450)
+
+        -- Draw start button
+        if startButton then
+            if startButton.enabled then
+                love.graphics.setColor(1, 1, 1)
+            else
+                love.graphics.setColor(0.5, 0.5, 0.5)
+            end
+            startButton:draw()
+            love.graphics.setColor(1, 1, 1)
+        end
+    elseif gamestate == "game" then
+        Game.draw()
     end
 end
 
@@ -70,17 +97,28 @@ function love.mousepressed(x, y, button)
                 if btn.hovered then
                     if btn.text == "New Game" then
                         gamestate = "country_select"
+                        -- Create Start Game button
+                        startButton = Button:new("Start Game", screenX/2 - 200, 600, 400, 100)
                     elseif btn.text == "Quit" then
                         love.event.quit()
                     end
                 end
             end
         elseif gamestate == "country_select" then
+            -- Check input fields
             inputFields.country.active = isInside(x, y, 600, inputFields.country.y, 400, 50)
             inputFields.currency.active = isInside(x, y, 600, inputFields.currency.y, 400, 50)
+
+            -- Check Start Game button
+            if startButton and startButton.enabled and isInside(x, y, startButton.x, startButton.y, startButton.width, startButton.height) then
+                -- Start the game
+                Game.load(inputFields.country.text, inputFields.currency.text)
+                gamestate = "game"
+            end
         end
     end
 end
+
 
 function love.textinput(t)
     for key, field in pairs(inputFields) do
