@@ -91,31 +91,42 @@ function love.draw()
 end
 
 function love.mousepressed(x, y, button)
-    if gamestate == "menu" then
-        for _, btn in ipairs(buttons) do
-            if btn.hovered then
-                if btn.text == "New Game" then
-                    gamestate = "country_select"
-                    startButton = Button:new("Start Game", screenX/2 - 200, 600, 400, 100)
-                elseif btn.text == "Continue" then
-                    Game.loadFromSave()
-                    gamestate = "game"
-                elseif btn.text == "Quit" then
-                    love.event.quit()
+    if button == 1 then
+        if gamestate == "menu" then
+            for _, btn in ipairs(buttons) do
+                if btn.hovered then
+                    if btn.text == "New Game" then
+                        gamestate = "country_select"
+                        startButton = Button:new("Start Game", screenX/2 - 200, 600, 400, 100)
+                    elseif btn.text == "Continue" then
+                        Game.loadFromSave()
+                        gamestate = "game"
+                    elseif btn.text == "Quit" then
+                        love.event.quit()
+                    end
                 end
             end
-        end
-    elseif gamestate == "game" then
-        if Game.menuButton and isInside(x, y, Game.menuButton.x, Game.menuButton.y, Game.menuButton.width, Game.menuButton.height) then
-            gamestate = "menu"
-        end
-    elseif gamestate == "country_select" then
-        inputFields.country.active = isInside(x, y, 600, inputFields.country.y, 400, 50)
-        inputFields.currency.active = isInside(x, y, 600, inputFields.currency.y, 400, 50)
+        elseif gamestate == "game" then
+            if Game.uiState == "main" then
+                if Game.menuButton and isInside(x, y, Game.menuButton.x, Game.menuButton.y, Game.menuButton.width, Game.menuButton.height) then
+                    Game.save()
+                    gamestate = "menu"
+                elseif Game.industryButton and isInside(x, y, Game.industryButton.x, Game.industryButton.y, Game.industryButton.width, Game.industryButton.height) then
+                    Game.uiState = "industry"
+                end
+            elseif Game.uiState == "industry" then
+                if Game.closeButton and isInside(x, y, Game.closeButton.x, Game.closeButton.y, Game.closeButton.width, Game.closeButton.height) then
+                    Game.uiState = "main"
+                end
+            end
+        elseif gamestate == "country_select" then
+            inputFields.country.active = isInside(x, y, 600, inputFields.country.y, 400, 50)
+            inputFields.currency.active = isInside(x, y, 600, inputFields.currency.y, 400, 50)
 
-        if startButton and startButton.enabled and isInside(x, y, startButton.x, startButton.y, startButton.width, startButton.height) then
-            Game.load(inputFields.country.text, inputFields.currency.text)
-            gamestate = "game"
+            if startButton and startButton.enabled and isInside(x, y, startButton.x, startButton.y, startButton.width, startButton.height) then
+                Game.load(inputFields.country.text, inputFields.currency.text)
+                gamestate = "game"
+            end
         end
     end
 end
@@ -127,6 +138,7 @@ function love.textinput(t)
             local maxLen = 20
             if key == "currency" then
                 maxLen = 5
+                t = t:upper() 
             end
             if #field.text < maxLen then
                 field.text = field.text .. t
@@ -134,6 +146,7 @@ function love.textinput(t)
         end
     end
 end
+
 
 
 function love.keypressed(key)
