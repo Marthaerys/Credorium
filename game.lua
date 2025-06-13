@@ -95,22 +95,43 @@ function Game.draw()
         if Game.menuButton then Game.menuButton:draw() end
         if Game.industryButton then Game.industryButton:draw() end
     elseif Game.uiState == "industry" then
+        -- Calculate 90% width and height
+        local width = screenX * 0.9
+        local height = screenY * 0.9
+        local x = (screenX - width) / 2
+        local y = (screenY - height) / 2
+
+        -- Background panel
         love.graphics.setColor(0.2, 0.2, 0.2, 0.9)
-        love.graphics.rectangle("fill", screenX/2 - 300, screenY/2 - 200, 600, 400, 12, 12)
+        love.graphics.rectangle("fill", x, y, width, height, 12, 12)
 
+        -- Title text
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Industry Overview", screenX/2 - 300, screenY/2 - 180, 600, "center")
-        love.graphics.printf("Manufacturing output: 1,500 units\nEmployment: 25%\nExports: 300 units", 
-                            screenX/2 - 250, screenY/2 - 120, 500, "left")
+        love.graphics.printf("Industry Overview", x, y + 20, width, "center")
 
-        if Game.closeButton then Game.closeButton:draw() end
+        -- Example data text area with some padding
+        love.graphics.printf(
+            "Manufacturing output: 1,500 units\nEmployment: 25%\nExports: 300 units",
+            x + 50, y + 80, width - 100, "left"
+        )
+
+        -- Draw close button, reposition it nicely in the new bigger window
+        if Game.closeButton then
+            -- Reposition close button relative to new window
+            Game.closeButton.x = x + (width / 2) - (Game.closeButton.width / 2)
+            Game.closeButton.y = y + height - Game.closeButton.height - 40
+            Game.closeButton:draw()
+        end
     end
 
     -- Day/week/year in top right
     love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(" Day: " .. Game.day .. "  Week: " .. Game.week .. "  Year: " .. Game.year,
-                         0, 20, screenX - 20, "right")
+    love.graphics.printf(
+        " Day: " .. Game.day .. "  Week: " .. Game.week .. "  Year: " .. Game.year,
+        0, 20, screenX - 20, "right"
+    )
 end
+
 
 
 -- Helper function
