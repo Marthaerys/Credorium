@@ -14,36 +14,29 @@ function Button:new(text, x, y, width, height)
 end
 
 function Button:isHovered(mx, my)
-    return mx > self.x and mx < self.x + self.width and my > self.y and my < self.y + self.height
+    return mx >= self.x and mx <= self.x + self.width and
+           my >= self.y and my <= self.y + self.height
+end
+
+function Button:update()
+    local mx, my = love.mouse.getPosition()
+    self.hovered = self:isHovered(mx, my)
 end
 
 function Button:draw()
-    -- Draw button background
-    if self.hovered then
-        love.graphics.setColor(0.3, 0.3, 0.3)
-    else
-        love.graphics.setColor(0.2, 0.2, 0.2)
-    end
+    -- Background
+    love.graphics.setColor(self.hovered and {0.3, 0.3, 0.3} or {0.2, 0.2, 0.2})
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, 10, 10)
 
-    -- Draw button border
+    -- Border
     love.graphics.setColor(1, 1, 1)
     love.graphics.setLineWidth(2)
     love.graphics.rectangle("line", self.x, self.y, self.width, self.height, 10, 10)
 
-    -- Draw centered text
-    local textY = self.y + (self.height - love.graphics.getFont():getHeight()) / 2
-    love.graphics.printf(
-        self.text,
-        self.x,
-        textY,
-        self.width,
-        "center"
-    )
-end
-
-function Button:update(mx, my)
-    self.hovered = self:isHovered(mx, my)
+    -- Text
+    local font = love.graphics.getFont()
+    local textY = self.y + (self.height - font:getHeight()) / 2
+    love.graphics.printf(self.text, self.x, textY, self.width, "center")
 end
 
 return Button
