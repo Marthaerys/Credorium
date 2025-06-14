@@ -30,6 +30,10 @@ function Game.load(countryName, currencyName)
     Game.menuButton = Button:new("Menu", 20, screenY - 100, 200, 80)
     Game.industryButton = Button:new("Industry", 240, screenY - 100, 200, 80)
     Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
+    Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80, function()
+    Game.uiState = "population"
+end)
+
 end
 
 function Game.loadFromSave()
@@ -46,6 +50,9 @@ function Game.loadFromSave()
         Game.menuButton = Button:new("Menu", 20, screenY - 100, 200, 80)
         Game.industryButton = Button:new("Industry", 240, screenY - 100, 200, 80)
         Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
+        Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80, function()
+        Game.uiState = "population" end)
+
 
     end
 end
@@ -62,7 +69,10 @@ function Game.update(dt)
     if Game.uiState == "main" then
         if Game.menuButton then Game.menuButton:update(mx, my) end
         if Game.industryButton then Game.industryButton:update(mx, my) end
-    elseif Game.uiState == "industry" then
+        if Game.populationButton then Game.populationButton:update(mx, my) end
+    elseif Game.uiState == "industry" or Game.uiState == "population" then
+        if Game.closeButton then Game.closeButton:update(mx, my) end
+    elseif Game.uiState == "population" then
         if Game.closeButton then Game.closeButton:update(mx, my) end
     end
 
@@ -75,7 +85,6 @@ function Game.update(dt)
         if Game.day > 7 then
             Game.day = 1
             Game.week = Game.week + 1
-            -- Company:updateWeek()
         end
 
         if Game.week > 52 then
@@ -85,17 +94,20 @@ function Game.update(dt)
     end
 end
 
+
 function Game.draw()
     local screenX, screenY = love.graphics.getDimensions()
 
+    -- Capital display
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(formatMoney(Game.capital) .. " " .. Game.currency, 20, 20)
 
     if Game.uiState == "main" then
         if Game.menuButton then Game.menuButton:draw() end
         if Game.industryButton then Game.industryButton:draw() end
-    elseif Game.uiState == "industry" then
-        -- Calculate 90% width and height
+        if Game.populationButton then Game.populationButton:draw() end
+
+    elseif Game.uiState == "industry" or Game.uiState == "population" then
         local width = screenX * 0.9
         local height = screenY * 0.9
         local x = (screenX - width) / 2
@@ -105,19 +117,24 @@ function Game.draw()
         love.graphics.setColor(0.2, 0.2, 0.2, 0.9)
         love.graphics.rectangle("fill", x, y, width, height, 12, 12)
 
-        -- Title text
+        -- Title and content
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Industry Overview", x, y + 20, width, "center")
+        if Game.uiState == "industry" then
+            love.graphics.printf("Industry Overview", x, y + 20, width, "center")
+            love.graphics.printf(
+                "Manufacturing output: 1,500 units\nEmployment: 25%\nExports: 300 units",
+                x + 50, y + 80, width - 100, "left"
+            )
+        elseif Game.uiState == "population" then
+            love.graphics.printf("Population Overview", x, y + 20, width, "center")
+            love.graphics.printf(
+                "Population data will be shown here.",
+                x + 50, y + 80, width - 100, "left"
+            )
+        end
 
-        -- Example data text area with some padding
-        love.graphics.printf(
-            "Manufacturing output: 1,500 units\nEmployment: 25%\nExports: 300 units",
-            x + 50, y + 80, width - 100, "left"
-        )
-
-        -- Draw close button, reposition it nicely in the new bigger window
+        -- Close button
         if Game.closeButton then
-            -- Reposition close button relative to new window
             Game.closeButton.x = x + (width / 2) - (Game.closeButton.width / 2)
             Game.closeButton.y = y + height - Game.closeButton.height - 40
             Game.closeButton:draw()

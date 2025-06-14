@@ -116,11 +116,15 @@ function love.mousepressed(x, y, button)
                 if Game.menuButton and Game.menuButton:isHovered(x, y) then
                     Game.save()
                     gamestate = "menu"
+
                 elseif Game.industryButton and Game.industryButton:isHovered(x, y) then
                     Game.uiState = "industry"
+
+                elseif Game.populationButton and Game.populationButton:isHovered(x, y) then
+                    Game.uiState = "population"
                 end
 
-            elseif Game.uiState == "industry" then
+            elseif Game.uiState == "industry" or Game.uiState == "population" then
                 if Game.closeButton and Game.closeButton:isHovered(x, y) then
                     Game.uiState = "main"
                 end
@@ -138,6 +142,7 @@ function love.mousepressed(x, y, button)
         end
     end
 end
+
 
 
 function love.textinput(t)
@@ -176,11 +181,4 @@ end
 
 function isInside(px, py, x, y, w, h)
     return px > x and px < x + w and py > y and py < y + h
-end
-
-
-print("Mouse clicked at:", x, y)
-for _, btn in ipairs(buttons) do
-    print("Checking button:", btn.text)
-    print("Hovered:", btn:isHovered(x, y))
 end
