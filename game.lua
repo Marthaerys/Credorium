@@ -171,6 +171,69 @@ Company = {
     total_costs = 0,
 }
 
+needs_pyramid = {
+    {
+        level = 1,
+        name = "Basisbehoeften",
+        examples = {
+            "Voedsel",
+            "Water",
+            "Energie (brandstof/stroom)",
+            "Huur / onderdak",
+            "Kleding (minimaal)",
+            "Basale zorg (vaccinaties, eerste hulp)"
+        }
+    },
+    {
+        level = 2,
+        name = "Veiligheid & Zekerheid",
+        examples = {
+            "Woningverbetering / beveiliging",
+            "Zorgverzekering",
+            "Spaarrekening",
+            "Vaste baan / inkomen",
+            "School voor kinderen (basis)",
+            "Transport (fiets, OV)"
+        }
+    },
+    {
+        level = 3,
+        name = "Sociale binding & status",
+        examples = {
+            "Feesten / bruiloften / cadeaus",
+            "Relatievorming / dating / bruidsprijs",
+            "Communicatiemiddelen (telefoon, internet)",
+            "Kleding (modieus)",
+            "Religieuze giften",
+            "Sociale bijdragen (familie steunen)"
+        }
+    },
+    {
+        level = 4,
+        name = "Ontwikkeling & onderwijs",
+        examples = {
+            "Hoger onderwijs / bijles",
+            "Privé-onderwijs voor kinderen",
+            "Computer / boeken",
+            "Talen leren",
+            "Cursussen / certificaten"
+        }
+    },
+    {
+        level = 5,
+        name = "Zelfontplooiing & luxe",
+        examples = {
+            "Vakanties",
+            "Luxe goederen (auto, sieraden)",
+            "Fitness & sportclubs",
+            "Entertainment (games, films, concerten)",
+            "Hobby’s & creativiteit",
+            "Designmeubels"
+        }
+    }
+}
+
+
 function Company:updateWeek()
     self:calculateRevenue()
     self:calculateCosts()
