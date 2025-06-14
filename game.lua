@@ -1,4 +1,6 @@
 local Game = {}
+local Population = require("population") 
+
 
 Game.capital = 1000000
 Game.currency = "BUCKS"
@@ -17,6 +19,8 @@ Game.timeCounter = 0
 Game.day = 1
 Game.week = 1
 Game.year = 1
+Game.previousWeek = 1 -- or 0, just make it exist at start
+
 
 function Game.load(countryName, currencyName)
     Game.country = countryName
@@ -92,6 +96,15 @@ function Game.update(dt)
             Game.year = Game.year + 1
         end
     end
+
+    local lastWeek = Game.previousWeek or 0
+    local currentWeek = Game.week or 0
+    local weeksPassed = currentWeek - lastWeek
+
+    if weeksPassed > 0 then
+        Population.updateByWeeks(weeksPassed)
+        Game.previousWeek = currentWeek
+    end
 end
 
 
@@ -126,11 +139,7 @@ function Game.draw()
                 x + 50, y + 80, width - 100, "left"
             )
         elseif Game.uiState == "population" then
-            love.graphics.printf("Population Overview", x, y + 20, width, "center")
-            love.graphics.printf(
-                "Population data will be shown here.",
-                x + 50, y + 80, width - 100, "left"
-            )
+            Population.draw(x, y, width, height)
         end
 
         -- Close button
@@ -140,6 +149,7 @@ function Game.draw()
             Game.closeButton:draw()
         end
     end
+
 
     -- Day/week/year in top right
     love.graphics.setColor(1, 1, 1)
