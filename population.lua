@@ -131,6 +131,22 @@ function Population.updateByWeeks(weeksPassed)
         end
         
         Population.ageGroups = newAgeGroups
+        Population.totals = {
+            children = 0,
+            working = 0,
+            retired = 0
+        }
+
+        for age = 0, 99 do
+            local count = Population.ageGroups[age]
+            if age <= 17 then
+                Population.totals.children = Population.totals.children + count
+            elseif age <= 64 then
+                Population.totals.working = Population.totals.working + count
+            else
+                Population.totals.retired = Population.totals.retired + count
+            end
+        end
         
         -- Track births and deaths for this week
         Population.changes.births = childrenIncreaseInt
