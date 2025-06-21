@@ -1,5 +1,6 @@
 local Game = {}
-local Population = require("population") 
+Population = require("population")
+print("Population geladen:", Population, type(Population))
 
 
 Game.capital = 1000000
@@ -139,7 +140,9 @@ function Game.draw()
                 x + 50, y + 80, width - 100, "left"
             )
         elseif Game.uiState == "population" then
-            Population.draw(x, y, width, height)
+            print("Type of Population:", type(Population))
+
+            Population.draw(x, y, width)
         end
 
         -- Close button
