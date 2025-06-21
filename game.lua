@@ -20,7 +20,7 @@ Game.timeCounter = 0
 Game.day = 1
 Game.week = 1
 Game.year = 1
-Game.previousWeek = 1 -- or 0, just make it exist at start
+Game.previousWeek = 0 
 
 
 function Game.load(countryName, currencyName)
@@ -68,16 +68,16 @@ function Game.save()
     love.filesystem.write("savegame.txt", data)
 end
 
+
 function Game.update(dt)
     local mx, my = love.mouse.getPosition()
 
+    -- UI updates
     if Game.uiState == "main" then
         if Game.menuButton then Game.menuButton:update(mx, my) end
         if Game.industryButton then Game.industryButton:update(mx, my) end
         if Game.populationButton then Game.populationButton:update(mx, my) end
     elseif Game.uiState == "industry" or Game.uiState == "population" then
-        if Game.closeButton then Game.closeButton:update(mx, my) end
-    elseif Game.uiState == "population" then
         if Game.closeButton then Game.closeButton:update(mx, my) end
     end
 
@@ -85,28 +85,36 @@ function Game.update(dt)
     Game.timeCounter = Game.timeCounter + dt
     if Game.timeCounter >= 1 then
         Game.timeCounter = Game.timeCounter - 1
-        Game.day = Game.day + 1
+        Game.day = Game.day + 6
 
         if Game.day > 7 then
             Game.day = 1
             Game.week = Game.week + 1
-        end
 
-        if Game.week > 52 then
-            Game.week = 1
-            Game.year = Game.year + 1
+            if Game.week > 52 then
+                Game.week = 1
+                Game.year = Game.year + 1
+            end
         end
     end
 
-    local lastWeek = Game.previousWeek or 0
+    -- Update population if a week has passed
     local currentWeek = Game.week or 0
-    local weeksPassed = currentWeek - lastWeek
+    local previousWeek = Game.previousWeek or 0
+
+    local weeksPassed
+    if currentWeek >= previousWeek then
+        weeksPassed = currentWeek - previousWeek
+    else
+        weeksPassed = (52 - previousWeek) + currentWeek
+    end
 
     if weeksPassed > 0 then
         Population.updateByWeeks(weeksPassed)
         Game.previousWeek = currentWeek
     end
 end
+
 
 
 function Game.draw()

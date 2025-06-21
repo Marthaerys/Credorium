@@ -8,7 +8,7 @@ Population.working = math.floor(Population.total * 0.60)
 Population.retired = math.floor(Population.total * 0.17)
 
 -- Birth and death rates
-Population.birthrate = 0.10
+Population.birthrate = 0.1
 local weeksPerYear = 52
 
 -- Death rate multiplier - adjust this to control overall death rates
