@@ -8,13 +8,13 @@ Population.working = math.floor(Population.total * 0.60)
 Population.retired = math.floor(Population.total * 0.17)
 
 -- Birth and death rates
-Population.birthrate = 0.1
+Population.birthrate = 0.10
 local weeksPerYear = 52
 
 -- Death rate multiplier - adjust this to control overall death rates
 -- Lower values = less deaths, higher population growth
 -- Aim for ~1% annual population growth, so try values like 0.3-0.8
-Population.deathRateMultiplier = 0.08
+Population.deathRateMultiplier = 0.1
 
 -- Calculate weekly birth rate
 Population.childrenGrowthPerWeek = (Population.birthrate * Population.working) / weeksPerYear
@@ -82,7 +82,8 @@ function Population.updateByWeeks(weeksPassed)
     -- Process each week individually for more accurate simulation
     for week = 1, weeksPassed do
         -- 1. Add new births
-        local childIncrease = Population.childrenGrowthPerWeek
+        -- Calculate births based on CURRENT working population:
+        local childIncrease = (Population.birthrate * Population.working) / weeksPerYear
         Population.childrenAcc = Population.childrenAcc + childIncrease
         local childrenIncreaseInt = math.floor(Population.childrenAcc)
         Population.childrenAcc = Population.childrenAcc - childrenIncreaseInt
@@ -145,101 +146,81 @@ function Population.updateByWeeks(weeksPassed)
     Population.changes.retired = Population.retired - prevRetired
 end
 
--- Get daily change rates for display (divide weekly changes by 7)
-function Population.getDailyChanges()
+-- Get weekly and yearly change rates for display
+function Population.getChanges()
+    local totalChange = Population.total - Population.previousTotal
     return {
-        children = Population.changes.children / 7,
-        working = Population.changes.working / 7,
-        retired = Population.changes.retired / 7,
-        births = Population.changes.births / 7,
-        deaths = Population.changes.deaths / 7,
-        totalChange = (Population.total - Population.previousTotal) / 7,
-        totalChangePercent = ((Population.total - Population.previousTotal) / Population.previousTotal) * 100 / 7 -- daily percent change
+        -- Weekly changes
+        children_week = Population.changes.children,
+        working_week = Population.changes.working,
+        retired_week = Population.changes.retired,
+        total_week = totalChange,
+        total_week_percent = (totalChange / Population.previousTotal) * 100,
+        
+        -- Yearly projections (weekly × 52)
+        children_year = Population.changes.children * 52,
+        working_year = Population.changes.working * 52,
+        retired_year = Population.changes.retired * 52,
+        total_year = totalChange * 52,
+        total_year_percent = ((totalChange * 52) / Population.previousTotal) * 100,
+        
+        births_week = Population.changes.births,
+        deaths_week = Population.changes.deaths
     }
 end
 
 -- Enhanced draw function with change rates
 function Population.draw(x, y, width, height)
-    local lh = 80  -- line height
+    local lh = 80 -- Line height
     local currentY = y + 40
 
+    -- Title
+    love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Population Overview", x, currentY, width, "center")
     currentY = currentY + lh * 1.2
 
-    -- Get daily changes for display
-    local dailyChanges = Population.getDailyChanges()
-    
-    -- Helper function to set color based on change value
-    local function setChangeColor(change)
-        if change > 0 then
-            love.graphics.setColor(0, 0.8, 0) -- Green for growth
-        elseif change < 0 then
-            love.graphics.setColor(0.8, 0, 0) -- Red for decline
-        else
-            love.graphics.setColor(0.6, 0.6, 0.6) -- Gray for no change
+    -- Column headers at 100, 400, 700, 1000
+    love.graphics.printf("Group",  x + 100,  currentY, 300, "left")
+    love.graphics.printf("Value",  x + 500,  currentY, 300, "left")
+    love.graphics.printf("/week",  x + 900,  currentY, 300, "left")
+    love.graphics.printf("/year",  x + 1300, currentY, 300, "left")
+    currentY = currentY + lh
+
+    -- Get changes
+    local c = Population.getChanges()
+
+    -- Helper to draw a row of data
+    local function drawRow(label, base, deltaW, percentW, deltaY, percentY)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf(label, x + 100, currentY, 400, "left")
+        love.graphics.printf(base,  x + 500, currentY, 400, "left")
+
+        local function fmt(n, p)
+            local sign = n > 0 and "+" or ""
+            return string.format("%s%d (%.1f%%)", sign, n, p)
         end
-    end
-    
-    -- Helper function to format change text
-    local function formatChange(change, isPercent)
-        if isPercent then
-            if change > 0 then
-                return string.format(" (+%.3f%%)", change)
-            elseif change < 0 then
-                return string.format(" (%.3f%%)", change)
-            else
-                return " (0%)"
-            end
-        else
-            if change > 0 then
-                return string.format(" (+%.1f)", change)
-            elseif change < 0 then
-                return string.format(" (%.1f)", change)
-            else
-                return " (0)"
-            end
-        end
+
+        -- Weekly change
+        love.graphics.setColor(deltaW > 0 and {0, 0.8, 0} or deltaW < 0 and {0.8, 0, 0} or {0.6, 0.6, 0.6})
+        love.graphics.printf(fmt(deltaW, percentW), x + 900, currentY, 400, "left")
+
+        -- Yearly change
+        love.graphics.setColor(deltaY > 0 and {0, 0.8, 0} or deltaY < 0 and {0.8, 0, 0} or {0.6, 0.6, 0.6})
+        love.graphics.printf(fmt(deltaY, percentY), x + 1300, currentY, 400, "left")
+
+        currentY = currentY + lh
     end
 
-    -- Current population with total change
-    love.graphics.setColor(1, 1, 1) -- White for main text
-    love.graphics.printf(string.format("Total: %d", Population.total), x + 20, currentY, width - 40, "left")
-    
-    -- Add total change info in smaller text
-    setChangeColor(dailyChanges.totalChange)
-    love.graphics.printf(formatChange(dailyChanges.totalChange, false) .. "/day " .. formatChange(dailyChanges.totalChangePercent, true) .. "/day", x + 400, currentY + 5, width - 180, "left")
-    currentY = currentY + lh
-
-    -- Children with daily change
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(string.format("Children: %d", Population.children), x + 20, currentY, width - 40, "left")
-    setChangeColor(dailyChanges.children)
-    love.graphics.printf(formatChange(dailyChanges.children, false) .. "/day", x + 800, currentY + 5, width - 240, "left")
-    currentY = currentY + lh
-
-    -- Working with daily change
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(string.format("Working: %d", Population.working), x + 20, currentY, width - 40, "left")
-    setChangeColor(dailyChanges.working)
-    love.graphics.printf(formatChange(dailyChanges.working, false) .. "/day", x + 800, currentY + 5, width - 240, "left")
-    currentY = currentY + lh
-
-    -- Retired with daily change
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf(string.format("Retired: %d", Population.retired), x + 20, currentY, width - 40, "left")
-    setChangeColor(dailyChanges.retired)
-    love.graphics.printf(formatChange(dailyChanges.retired, false) .. "/day", x + 800, currentY + 5, width - 240, "left")
-    currentY = currentY + lh * 1.2
-
-    -- Birth and death rates
-    love.graphics.setColor(0, 0.8, 0) -- Green for births
-    love.graphics.printf(string.format("Births: %.1f/day", dailyChanges.births), x + 20, currentY, width - 40, "left")
-    currentY = currentY + lh * 0.8
-    love.graphics.setColor(0.8, 0, 0) -- Red for deaths
-    love.graphics.printf(string.format("Deaths: %.1f/day", dailyChanges.deaths), x + 20, currentY, width - 40, "left")
-    
-    -- Reset color
-    love.graphics.setColor(1, 1, 1)
+    -- Draw each row
+    drawRow("Total",    Population.total,   c.total_week,   c.total_week_percent,   c.total_year,   c.total_year_percent)
+    drawRow("Children", Population.children, c.children_week, 100 * c.children_week / math.max(Population.children, 1),
+                                             c.children_year, 100 * c.children_year / math.max(Population.children, 1))
+    drawRow("Working",  Population.working,  c.working_week, 100 * c.working_week / math.max(Population.working, 1),
+                                             c.working_year, 100 * c.working_year / math.max(Population.working, 1))
+    drawRow("Retired",  Population.retired,  c.retired_week, 100 * c.retired_week / math.max(Population.retired, 1),
+                                             c.retired_year, 100 * c.retired_year / math.max(Population.retired, 1))
 end
+
+
 
 return Population
