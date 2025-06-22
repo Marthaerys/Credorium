@@ -1,4 +1,4 @@
--- population version 2.0
+-- population version 4.0
 local Population = {}
 
 -- Initial population counts
@@ -8,13 +8,11 @@ Population.working = math.floor(Population.total * 0.60)
 Population.retired = math.floor(Population.total * 0.17)
 
 -- Birth and death rates
-Population.birthrate = 0.1
+Population.birthrate = 0.05
 local weeksPerYear = 52
 
--- Death rate multiplier - adjust this to control overall death rates
--- Lower values = less deaths, higher population growth
--- Aim for ~1% annual population growth, so try values like 0.3-0.8
-Population.deathRateMultiplier = 0.1
+-- Aim for ~1% annual population growth
+Population.deathRateMultiplier = 150
 
 -- Calculate weekly birth rate
 Population.childrenGrowthPerWeek = (Population.birthrate * Population.working) / weeksPerYear
@@ -49,8 +47,6 @@ Population.changes = {
     children = 0,      -- net change per week
     working = 0,       -- net change per week
     retired = 0,       -- net change per week
-    births = 0,        -- births per week
-    deaths = 0         -- deaths per week
 }
 
 -- Store previous total for growth rate calculation
@@ -89,20 +85,21 @@ function Population.updateByWeeks(weeksPassed)
         Population.childrenAcc = Population.childrenAcc - childrenIncreaseInt
         Population.ageGroups[0] = Population.ageGroups[0] + childrenIncreaseInt
         
-        -- 2. Apply deaths with linear age-based probability
+        -- 2. Apply deaths using Gompertz–Makeham Law of Mortality (only for age ≥ 30)
         local totalDeaths = 0
-        for age = 0, 99 do
-            -- Linear death rate: age 1 = 1% annually, age 80 = 80% annually, etc.
-            -- Multiply by deathRateMultiplier to control overall death rates
-            local annualDeathRate = math.max(0.01, age / 100) * Population.deathRateMultiplier
+        for age = 30, 99 do
+            -- Gompertz–Makeham approximation:
+            -- qₓ ≈ 10⁻⁵ ⋅ 2^((x - 30)/10)
+            local annualDeathRate = Population.deathRateMultiplier * 1e-5 * 2^((age - 30) / 10)
             local weeklyDeathRate = annualDeathRate / weeksPerYear
-            
+
             local deaths = Population.ageGroups[age] * weeklyDeathRate
-            deaths = math.min(deaths, Population.ageGroups[age]) -- can't die more than exist
-            
+            deaths = math.min(deaths, Population.ageGroups[age]) -- cap at population in that age group
+
             Population.ageGroups[age] = Population.ageGroups[age] - deaths
             totalDeaths = totalDeaths + deaths
         end
+
         
         -- 3. Age everyone by 1/52 of a year (weekly aging)
         -- Move 1/52 of each age group to the next age group
@@ -131,26 +128,8 @@ function Population.updateByWeeks(weeksPassed)
         end
         
         Population.ageGroups = newAgeGroups
-        Population.totals = {
-            children = 0,
-            working = 0,
-            retired = 0
-        }
-
-        for age = 0, 99 do
-            local count = Population.ageGroups[age]
-            if age <= 17 then
-                Population.totals.children = Population.totals.children + count
-            elseif age <= 64 then
-                Population.totals.working = Population.totals.working + count
-            else
-                Population.totals.retired = Population.totals.retired + count
-            end
-        end
         
-        -- Track births and deaths for this week
-        Population.changes.births = childrenIncreaseInt
-        Population.changes.deaths = totalDeaths
+        
     end
     
     -- Recalculate totals after all weeks processed
@@ -160,6 +139,8 @@ function Population.updateByWeeks(weeksPassed)
     Population.changes.children = Population.children - prevChildren
     Population.changes.working = Population.working - prevWorking
     Population.changes.retired = Population.retired - prevRetired
+
+
 end
 
 -- Get weekly and yearly change rates for display
@@ -180,8 +161,6 @@ function Population.getChanges()
         total_year = totalChange * 52,
         total_year_percent = ((totalChange * 52) / Population.previousTotal) * 100,
         
-        births_week = Population.changes.births,
-        deaths_week = Population.changes.deaths
     }
 end
 
