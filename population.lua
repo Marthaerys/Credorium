@@ -328,6 +328,22 @@ function Population.getChanges()
     }
 end
 
+--Food distribution 0.05/child + 0.1/adult + 0.08 elderly
+function updateFoodDemand()
+    local children = Population.children or 0
+    local adults = Population.adults or 0
+    local elderly = Population.elderly or 0
+
+    FoodDemand = 0.05 * children + 0.1 * adults + 0.08 * elderly
+end
+
+function love.update(dt)
+    updateFoodDemand()
+    -- Other update logic
+end
+
+
+
 -- Enhanced draw function with skill level breakdown
 function Population.draw(x, y, width, height)
     local lh = 80 -- Line height
@@ -390,6 +406,27 @@ function Population.draw(x, y, width, height)
                                                   c.working_medium_week * 52, 100 * c.working_medium_week * 52 / math.max(workingSkills.medium, 1))
     drawRow("└ High Skill", workingSkills.high,   c.working_high_week,   100 * c.working_high_week / math.max(workingSkills.high, 1),
                                                   c.working_high_week * 52, 100 * c.working_high_week * 52 / math.max(workingSkills.high, 1))
+    -- Title2
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf("Consumer demands", x, currentY, width, "center")
+    currentY = currentY +lh
+    -- Column headers at same positions as v4.0
+    love.graphics.printf("Item",  x + 100,  currentY, 300, "left")
+    love.graphics.printf("/Day",  x + 500,  currentY, 300, "left")
+    currentY = currentY +lh
+
+    -- Compute demand before drawing
+    local children = Population.children or 0
+    local adults   = Population.working or 0
+    local elderly  = Population.retired or 0
+    local FoodDemand = 0.05 * children + 0.1 * adults + 0.08 * elderly
+    -- Draw static row
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf("Food", x + 100, currentY, 400, "left")
+    love.graphics.printf(string.format("%.1f", FoodDemand), x + 500, currentY, 400, "left")
+    currentY = currentY + lh
+
+
 end
 
 return Population
