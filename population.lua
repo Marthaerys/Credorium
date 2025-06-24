@@ -8,9 +8,17 @@ Population.skillDistribution = {
     high = 0.20
 }
 
+-- Income class distribution per skill level
+Population.incomeDistribution = {
+    low = {low = 0.74, medium = 0.21, high = 0.05},
+    medium = {low = 0.31, medium = 0.60, high = 0.10},
+    high = {low = 0.05, medium = 0.36, high = 0.60}
+}
+
 -- Initial population counts
 Population.total = 100000
 Population.children = math.floor(Population.total * 0.23)
+Population.students = 0
 Population.working = math.floor(Population.total * 0.60)
 Population.retired = math.floor(Population.total * 0.17)
 
@@ -27,49 +35,64 @@ Population.childrenGrowthPerWeek = (Population.birthrate * Population.working) /
 -- Accumulator for fractional births
 Population.childrenAcc = 0
 
--- For ages 0-17: no skill levels (just a number)
--- For ages 18-99: each age has {low, medium, high} skill breakdown
+-- Age ranges
+local childEndAge = 17         -- 0–17
+local studentStartAge = 18     -- 18–22
+local studentEndAge = 22
+local workingStartAge = 23     -- 23–64
+local retiredStartAge = 65     -- 65–99
+local deathAge = 99
+
+-- Initialize ageGroups
 Population.ageGroups = {}
 
--- Initialize children (ages 0-17) - no skill levels yet
-for age = 0, 17 do
+-- Initialize children and students (0–22)
+for age = 0, studentEndAge do
     Population.ageGroups[age] = 0
 end
 
--- Initialize working and retired (ages 18-99) with skill levels
--- All initially assigned as low skill as per requirements
-for age = 18, 99 do
+-- Initialize working and retired (23–99) with skill levels
+for age = workingStartAge, deathAge do
     Population.ageGroups[age] = {
-        low = 0,
-        medium = 0,
-        high = 0
+        low = {low = 0, medium = 0, high = 0},
+        medium = {low = 0, medium = 0, high = 0},
+        high = {low = 0, medium = 0, high = 0}
     }
 end
 
--- Set initial distribution
-local childrenPortion = Population.children / 18
-local workingPortion = Population.working / (64 - 18 + 1)
-local retiredPortion = Population.retired / (99 - 65 + 1)
+-- Distribute students (18–22)
+local studentCount = 0
+for age = 18, 22 do
+    studentCount = studentCount + Population.ageGroups[age]
+end
 
--- Children (0-17) - simple numbers
-for age = 0, 17 do
+
+-- Set portions
+local childrenPortion = Population.children / (childEndAge + 1)
+local studentPortion = studentCount / (studentEndAge - studentStartAge + 1)
+local workingPortion = Population.working / (retiredStartAge - workingStartAge)
+local retiredPortion = Population.retired / (deathAge - retiredStartAge + 1)
+
+-- Distribute children (0–17)
+for age = 0, childEndAge do
     Population.ageGroups[age] = childrenPortion
 end
 
--- Working age (18–64) - follow skill distribution
-for age = 18, 64 do
+
+
+-- Distribute working adults (23–64)
+for age = workingStartAge, retiredStartAge - 1 do
     Population.ageGroups[age].low = workingPortion * Population.skillDistribution.low
     Population.ageGroups[age].medium = workingPortion * Population.skillDistribution.medium
     Population.ageGroups[age].high = workingPortion * Population.skillDistribution.high
 end
 
--- Retired (65–99) - follow skill distribution
-for age = 65, 99 do
+-- Distribute retirees (65–99)
+for age = retiredStartAge, deathAge do
     Population.ageGroups[age].low = retiredPortion * Population.skillDistribution.low
     Population.ageGroups[age].medium = retiredPortion * Population.skillDistribution.medium
     Population.ageGroups[age].high = retiredPortion * Population.skillDistribution.high
 end
-
 
 -- Track population changes for display
 Population.changes = {
@@ -88,19 +111,48 @@ Population.changes = {
 -- Store previous totals
 Population.previousTotal = Population.total
 
--- Helper: get total population in an age group (18-99)
-local function getAgeGroupTotal(ageGroup)
-    if type(ageGroup) == "number" then
-        return ageGroup -- Children ages 0-17
+--Helper: assing income from skill
+local function assignIncomeFromSkill(skillLevel, count)
+    local assigned = {low = 0, medium = 0, high = 0}
+    local dist = Population.incomeDistribution[skillLevel]
+
+    local remaining = count
+    while remaining > 0 do
+        local r = math.random()
+        if r < dist.low then
+            assigned.low = assigned.low + 1
+        elseif r < dist.low + dist.medium then
+            assigned.medium = assigned.medium + 1
+        else
+            assigned.high = assigned.high + 1
+        end
+        remaining = remaining - 1
+    end
+
+    return assigned
+end
+
+
+-- Helper: get total population in an age group (0–99)
+local function getAgeGroupTotal(group)
+    if type(group) == "number" then
+        return group -- For simple child/student counts
+    elseif type(group) == "table" then
+        local total = 0
+        for _, v in pairs(group) do
+            total = total + getAgeGroupTotal(v)
+        end
+        return total
     else
-        return ageGroup.low + ageGroup.medium + ageGroup.high
+        return 0
     end
 end
+
 
 -- Helper: get skill breakdown for working population
 function Population.getWorkingSkills()
     local skills = {low = 0, medium = 0, high = 0}
-    for age = 18, 64 do
+    for age = workingStartAge, retiredStartAge - 1 do
         skills.low = skills.low + Population.ageGroups[age].low
         skills.medium = skills.medium + Population.ageGroups[age].medium
         skills.high = skills.high + Population.ageGroups[age].high
@@ -115,7 +167,7 @@ end
 -- Helper: get skill breakdown for retired population
 function Population.getRetiredSkills()
     local skills = {low = 0, medium = 0, high = 0}
-    for age = 65, 99 do
+    for age = retiredStartAge, deathAge do
         skills.low = skills.low + Population.ageGroups[age].low
         skills.medium = skills.medium + Population.ageGroups[age].medium
         skills.high = skills.high + Population.ageGroups[age].high
@@ -129,28 +181,35 @@ end
 
 -- Helper: recalculate aggregate categories from age groups
 function Population.recalculateTotals()
-    local children, working, retired = 0, 0, 0
-    
-    -- Children (0-17)
-    for age = 0, 17 do 
-        children = children + Population.ageGroups[age] 
+    local children, students, working, retired = 0, 0, 0, 0
+
+    -- Children (0–17)
+    for age = 0, childEndAge do
+        children = children + Population.ageGroups[age]
     end
-    
-    -- Working (18-64)
-    for age = 18, 64 do 
+
+    -- Students (18–22)
+    for age = studentStartAge, studentEndAge do
+        students = students + Population.ageGroups[age]
+    end
+
+    -- Working (23–64)
+    for age = workingStartAge, retiredStartAge - 1 do
         working = working + getAgeGroupTotal(Population.ageGroups[age])
     end
-    
-    -- Retired (65-99)
-    for age = 65, 99 do 
+
+    -- Retired (65–99)
+    for age = retiredStartAge, deathAge do
         retired = retired + getAgeGroupTotal(Population.ageGroups[age])
     end
 
     Population.children = math.floor(children)
+    Population.students = math.floor(students)
     Population.working = math.floor(working)
     Population.retired = math.floor(retired)
-    Population.total = Population.children + Population.working + Population.retired
+    Population.total = Population.children + Population.students + Population.working + Population.retired
 end
+
 
 -- Helper: assign skill levels to new 18-year-olds
 local function assignSkillLevels(newWorkers)
@@ -196,72 +255,81 @@ function Population.updateByWeeks(weeksPassed)
         
         -- 2. Apply deaths (ages 30-99)
         for age = 30, 99 do
-            local annualDeathRate = Population.deathRateMultiplier * 1e-5 * 2^((age - 30) / 10)
-            local weeklyDeathRate = annualDeathRate / weeksPerYear
-            
-            if age <= 17 then
-                -- Children (shouldn't happen since we start at age 30)
-                local deaths = Population.ageGroups[age] * weeklyDeathRate
-                deaths = math.min(deaths, Population.ageGroups[age])
-                Population.ageGroups[age] = Population.ageGroups[age] - deaths
-            else
-                -- Adults with skill levels
-                local currentGroup = Population.ageGroups[age]
-                local totalPop = getAgeGroupTotal(currentGroup)
-                
+            local currentGroup = Population.ageGroups[age]
+
+            if type(currentGroup) == "table" and currentGroup.low and currentGroup.medium and currentGroup.high then
+                -- Compute death rate per age
+                local annualDeathRate = Population.deathRateMultiplier * 1e-5 * 2^((age - 30) / 10)
+                local weeklyDeathRate = annualDeathRate / weeksPerYear  -- ✅ Make sure this line is here!
+
+                local function getSkillIncomeTotal(skillGroup)
+                    local total = 0
+                    for _, count in pairs(skillGroup) do
+                        total = total + count
+                    end
+                    return total
+                end
+
+                local totalPop = getSkillIncomeTotal(currentGroup.low)
+                            + getSkillIncomeTotal(currentGroup.medium)
+                            + getSkillIncomeTotal(currentGroup.high)
+
                 if totalPop > 0 then
                     local deaths = totalPop * weeklyDeathRate
                     deaths = math.min(deaths, totalPop)
-                    
-                    -- Distribute deaths proportionally across skill levels
-                    local deathsLow = (currentGroup.low / totalPop) * deaths
-                    local deathsMedium = (currentGroup.medium / totalPop) * deaths
-                    local deathsHigh = (currentGroup.high / totalPop) * deaths
-                    
-                    currentGroup.low = math.max(0, currentGroup.low - deathsLow)
-                    currentGroup.medium = math.max(0, currentGroup.medium - deathsMedium)
-                    currentGroup.high = math.max(0, currentGroup.high - deathsHigh)
+
+                    for skill, skillGroup in pairs(currentGroup) do
+                        local skillTotal = getSkillIncomeTotal(skillGroup)
+                        for income, count in pairs(skillGroup) do
+                            local share = (count / skillTotal) * (skillTotal / totalPop) * deaths
+                            skillGroup[income] = math.max(0, count - share)
+                        end
+                    end
                 end
             end
         end
-        
+
         -- 3. Age everyone by 1/52 of a year
         local agingFraction = 1 / weeksPerYear
         local newAgeGroups = {}
         
         -- Initialize new age groups
-        for age = 0, 17 do
+        for age = 0, studentEndAge do
             newAgeGroups[age] = 0
         end
-        for age = 18, 99 do
+        for age = workingStartAge, deathAge do
             newAgeGroups[age] = {low = 0, medium = 0, high = 0}
         end
         
-        -- Age children (0-17)
-        for age = 0, 17 do
+        -- Age untill student end
+        for age = 0, studentEndAge do
             local currentPop = Population.ageGroups[age]
             local agingOut = currentPop * agingFraction
             local stayingPut = currentPop - agingOut
-            
+
             newAgeGroups[age] = newAgeGroups[age] + stayingPut
-            
-            if age < 17 then
-                -- Age to next child age
+
+            if age < studentEndAge then
                 newAgeGroups[age + 1] = newAgeGroups[age + 1] + agingOut
-            elseif age == 17 then
-                -- Age to 18 - assign skill levels!
+            elseif age == studentEndAge then
+                -- At 23: assign skill levels
                 local newWorkers = math.floor(agingOut)
                 if newWorkers > 0 then
                     local skillAssignment = assignSkillLevels(newWorkers)
-                    newAgeGroups[18].low = newAgeGroups[18].low + skillAssignment.low
-                    newAgeGroups[18].medium = newAgeGroups[18].medium + skillAssignment.medium
-                    newAgeGroups[18].high = newAgeGroups[18].high + skillAssignment.high
+
+                    for skill, count in pairs(skillAssignment) do
+                        local incomeAssignment = assignIncomeFromSkill(skill, count)
+                        for income, subcount in pairs(incomeAssignment) do
+                            newAgeGroups[23][skill][income] = newAgeGroups[23][skill][income] + subcount
+                        end
+                    end
                 end
             end
         end
+
         
-        -- Age adults (18-99)
-        for age = 18, 99 do
+        -- Age adults (23–99)
+        for age = workingStartAge, deathAge do
             local currentGroup = Population.ageGroups[age]
             
             for skill, pop in pairs(currentGroup) do
@@ -328,19 +396,7 @@ function Population.getChanges()
     }
 end
 
---Food distribution 0.05/child + 0.1/adult + 0.08 elderly
-function updateFoodDemand()
-    local children = Population.children or 0
-    local adults = Population.adults or 0
-    local elderly = Population.elderly or 0
 
-    FoodDemand = 0.05 * children + 0.1 * adults + 0.08 * elderly
-end
-
-function love.update(dt)
-    updateFoodDemand()
-    -- Other update logic
-end
 
 
 
@@ -390,7 +446,7 @@ function Population.draw(x, y, width, height)
     drawRow("Total",    Population.total,   c.total_week,   c.total_week_percent,   c.total_year,   c.total_year_percent)
     drawRow("Children", Population.children, c.children_week, 100 * c.children_week / math.max(Population.children, 1),
                                              c.children_year, 100 * c.children_year / math.max(Population.children, 1))
-    drawRow("Working",  Population.working,  c.working_week, 100 * c.working_week / math.max(Population.working, 1),
+    drawRow("Adults",  Population.working,  c.working_week, 100 * c.working_week / math.max(Population.working, 1),
                                              c.working_year, 100 * c.working_year / math.max(Population.working, 1))
     drawRow("Retired",  Population.retired,  c.retired_week, 100 * c.retired_week / math.max(Population.retired, 1),
                                              c.retired_year, 100 * c.retired_year / math.max(Population.retired, 1))
@@ -406,26 +462,6 @@ function Population.draw(x, y, width, height)
                                                   c.working_medium_week * 52, 100 * c.working_medium_week * 52 / math.max(workingSkills.medium, 1))
     drawRow("└ High Skill", workingSkills.high,   c.working_high_week,   100 * c.working_high_week / math.max(workingSkills.high, 1),
                                                   c.working_high_week * 52, 100 * c.working_high_week * 52 / math.max(workingSkills.high, 1))
-    -- Title2
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("Consumer demands", x, currentY, width, "center")
-    currentY = currentY +lh
-    -- Column headers at same positions as v4.0
-    love.graphics.printf("Item",  x + 100,  currentY, 300, "left")
-    love.graphics.printf("/Day",  x + 500,  currentY, 300, "left")
-    currentY = currentY +lh
-
-    -- Compute demand before drawing
-    local children = Population.children or 0
-    local adults   = Population.working or 0
-    local elderly  = Population.retired or 0
-    local FoodDemand = 0.05 * children + 0.1 * adults + 0.08 * elderly
-    -- Draw static row
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("Food", x + 100, currentY, 400, "left")
-    love.graphics.printf(string.format("%.1f", FoodDemand), x + 500, currentY, 400, "left")
-    currentY = currentY + lh
-
 
 end
 
