@@ -1,4 +1,4 @@
--- population version 5.0 - with skill levels
+-- population version 5.0 - with skill levels (FIXED)
 local Population = {}
 
 -- Skill level distribution for new workers (when turning 18)
@@ -66,7 +66,6 @@ for age = 18, 22 do
     studentCount = studentCount + Population.ageGroups[age]
 end
 
-
 -- Set portions
 local childrenPortion = Population.children / (childEndAge + 1)
 local studentPortion = studentCount / (studentEndAge - studentStartAge + 1)
@@ -78,20 +77,28 @@ for age = 0, childEndAge do
     Population.ageGroups[age] = childrenPortion
 end
 
-
-
--- Distribute working adults (23–64)
+-- Distribute working adults (23–64) with income distribution
 for age = workingStartAge, retiredStartAge - 1 do
-    Population.ageGroups[age].low = workingPortion * Population.skillDistribution.low
-    Population.ageGroups[age].medium = workingPortion * Population.skillDistribution.medium
-    Population.ageGroups[age].high = workingPortion * Population.skillDistribution.high
+    for skill, skillRatio in pairs(Population.skillDistribution) do
+        local skillPop = workingPortion * skillRatio
+        local incDist = Population.incomeDistribution[skill]
+        
+        Population.ageGroups[age][skill].low = skillPop * incDist.low
+        Population.ageGroups[age][skill].medium = skillPop * incDist.medium
+        Population.ageGroups[age][skill].high = skillPop * incDist.high
+    end
 end
 
--- Distribute retirees (65–99)
+-- Distribute retirees (65–99) with income distribution
 for age = retiredStartAge, deathAge do
-    Population.ageGroups[age].low = retiredPortion * Population.skillDistribution.low
-    Population.ageGroups[age].medium = retiredPortion * Population.skillDistribution.medium
-    Population.ageGroups[age].high = retiredPortion * Population.skillDistribution.high
+    for skill, skillRatio in pairs(Population.skillDistribution) do
+        local skillPop = retiredPortion * skillRatio
+        local incDist = Population.incomeDistribution[skill]
+        
+        Population.ageGroups[age][skill].low = skillPop * incDist.low
+        Population.ageGroups[age][skill].medium = skillPop * incDist.medium
+        Population.ageGroups[age][skill].high = skillPop * incDist.high
+    end
 end
 
 -- Track population changes for display
@@ -111,7 +118,7 @@ Population.changes = {
 -- Store previous totals
 Population.previousTotal = Population.total
 
---Helper: assing income from skill
+--Helper: assign income from skill
 local function assignIncomeFromSkill(skillLevel, count)
     local assigned = {low = 0, medium = 0, high = 0}
     local dist = Population.incomeDistribution[skillLevel]
@@ -132,7 +139,6 @@ local function assignIncomeFromSkill(skillLevel, count)
     return assigned
 end
 
-
 -- Helper: get total population in an age group (0–99)
 local function getAgeGroupTotal(group)
     if type(group) == "number" then
@@ -148,14 +154,15 @@ local function getAgeGroupTotal(group)
     end
 end
 
-
 -- Helper: get skill breakdown for working population
 function Population.getWorkingSkills()
     local skills = {low = 0, medium = 0, high = 0}
     for age = workingStartAge, retiredStartAge - 1 do
-        skills.low = skills.low + Population.ageGroups[age].low
-        skills.medium = skills.medium + Population.ageGroups[age].medium
-        skills.high = skills.high + Population.ageGroups[age].high
+        for skill, incomeGroup in pairs(Population.ageGroups[age]) do
+            for income, count in pairs(incomeGroup) do
+                skills[skill] = skills[skill] + count
+            end
+        end
     end
     return {
         low = math.floor(skills.low),
@@ -168,9 +175,11 @@ end
 function Population.getRetiredSkills()
     local skills = {low = 0, medium = 0, high = 0}
     for age = retiredStartAge, deathAge do
-        skills.low = skills.low + Population.ageGroups[age].low
-        skills.medium = skills.medium + Population.ageGroups[age].medium
-        skills.high = skills.high + Population.ageGroups[age].high
+        for skill, incomeGroup in pairs(Population.ageGroups[age]) do
+            for income, count in pairs(incomeGroup) do
+                skills[skill] = skills[skill] + count
+            end
+        end
     end
     return {
         low = math.floor(skills.low),
@@ -209,7 +218,6 @@ function Population.recalculateTotals()
     Population.retired = math.floor(retired)
     Population.total = Population.children + Population.students + Population.working + Population.retired
 end
-
 
 -- Helper: assign skill levels to new 18-year-olds
 local function assignSkillLevels(newWorkers)
@@ -253,36 +261,35 @@ function Population.updateByWeeks(weeksPassed)
         Population.childrenAcc = Population.childrenAcc - childrenIncreaseInt
         Population.ageGroups[0] = Population.ageGroups[0] + childrenIncreaseInt
         
-        -- 2. Apply deaths (ages 30-99)
+        -- 2. Apply deaths (ages 30-99) - FIXED VERSION
         for age = 30, 99 do
             local currentGroup = Population.ageGroups[age]
 
+            -- Only process if this is a structured age group (23+)
             if type(currentGroup) == "table" and currentGroup.low and currentGroup.medium and currentGroup.high then
                 -- Compute death rate per age
                 local annualDeathRate = Population.deathRateMultiplier * 1e-5 * 2^((age - 30) / 10)
-                local weeklyDeathRate = annualDeathRate / weeksPerYear  -- ✅ Make sure this line is here!
+                local weeklyDeathRate = annualDeathRate / weeksPerYear
 
-                local function getSkillIncomeTotal(skillGroup)
-                    local total = 0
-                    for _, count in pairs(skillGroup) do
-                        total = total + count
+                -- Calculate total population in this age group
+                local totalPop = 0
+                for skill, incomeGroup in pairs(currentGroup) do
+                    for income, count in pairs(incomeGroup) do
+                        totalPop = totalPop + count
                     end
-                    return total
                 end
 
-                local totalPop = getSkillIncomeTotal(currentGroup.low)
-                            + getSkillIncomeTotal(currentGroup.medium)
-                            + getSkillIncomeTotal(currentGroup.high)
-
                 if totalPop > 0 then
-                    local deaths = totalPop * weeklyDeathRate
-                    deaths = math.min(deaths, totalPop)
+                    local totalDeaths = totalPop * weeklyDeathRate
+                    totalDeaths = math.min(totalDeaths, totalPop)
 
-                    for skill, skillGroup in pairs(currentGroup) do
-                        local skillTotal = getSkillIncomeTotal(skillGroup)
-                        for income, count in pairs(skillGroup) do
-                            local share = (count / skillTotal) * (skillTotal / totalPop) * deaths
-                            skillGroup[income] = math.max(0, count - share)
+                    -- Apply deaths proportionally across all skill/income combinations
+                    for skill, incomeGroup in pairs(currentGroup) do
+                        for income, count in pairs(incomeGroup) do
+                            if count > 0 then
+                                local share = (count / totalPop) * totalDeaths
+                                incomeGroup[income] = math.max(0, count - share)
+                            end
                         end
                     end
                 end
@@ -298,10 +305,14 @@ function Population.updateByWeeks(weeksPassed)
             newAgeGroups[age] = 0
         end
         for age = workingStartAge, deathAge do
-            newAgeGroups[age] = {low = 0, medium = 0, high = 0}
+            newAgeGroups[age] = {
+                low = {low = 0, medium = 0, high = 0},
+                medium = {low = 0, medium = 0, high = 0},
+                high = {low = 0, medium = 0, high = 0}
+            }
         end
         
-        -- Age untill student end
+        -- Age children and students (0-22)
         for age = 0, studentEndAge do
             local currentPop = Population.ageGroups[age]
             local agingOut = currentPop * agingFraction
@@ -312,7 +323,7 @@ function Population.updateByWeeks(weeksPassed)
             if age < studentEndAge then
                 newAgeGroups[age + 1] = newAgeGroups[age + 1] + agingOut
             elseif age == studentEndAge then
-                -- At 23: assign skill levels
+                -- At 23: assign skill levels and income classes
                 local newWorkers = math.floor(agingOut)
                 if newWorkers > 0 then
                     local skillAssignment = assignSkillLevels(newWorkers)
@@ -326,20 +337,21 @@ function Population.updateByWeeks(weeksPassed)
                 end
             end
         end
-
         
         -- Age adults (23–99)
         for age = workingStartAge, deathAge do
             local currentGroup = Population.ageGroups[age]
             
-            for skill, pop in pairs(currentGroup) do
-                local agingOut = pop * agingFraction
-                local stayingPut = pop - agingOut
-                
-                newAgeGroups[age][skill] = newAgeGroups[age][skill] + stayingPut
-                
-                if age < 99 then
-                    newAgeGroups[age + 1][skill] = newAgeGroups[age + 1][skill] + agingOut
+            for skill, incomeGroup in pairs(currentGroup) do
+                for income, count in pairs(incomeGroup) do
+                    local agingOut = count * agingFraction
+                    local stayingPut = count - agingOut
+                    
+                    newAgeGroups[age][skill][income] = newAgeGroups[age][skill][income] + stayingPut
+                    
+                    if age < 99 then
+                        newAgeGroups[age + 1][skill][income] = newAgeGroups[age + 1][skill][income] + agingOut
+                    end
                 end
             end
         end
@@ -395,10 +407,6 @@ function Population.getChanges()
         retired_high_week = Population.changes.retired_high,
     }
 end
-
-
-
-
 
 -- Enhanced draw function with skill level breakdown
 function Population.draw(x, y, width, height)
