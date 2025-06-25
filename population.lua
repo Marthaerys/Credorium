@@ -113,10 +113,32 @@ Population.changes = {
     retired_low = 0,
     retired_medium = 0,
     retired_high = 0,
+    --Add income level changes
+    income_low = 0,
+    income_medium = 0,
+    income_high = 0,
 }
 
 -- Store previous totals
 Population.previousTotal = Population.total
+
+--Helper: income function
+function Population.getWorkingIncome()
+    local income = {low = 0, medium = 0, high = 0}
+    for age = workingStartAge, retiredStartAge - 1 do
+        for skill, incomeGroup in pairs(Population.ageGroups[age]) do
+            for incomeLevel, count in pairs(incomeGroup) do
+                income[incomeLevel] = income[incomeLevel] + count
+            end
+        end
+    end
+    return {
+        low = math.floor(income.low),
+        medium = math.floor(income.medium),
+        high = math.floor(income.high)
+    }
+end
+
 
 --Helper: assign income from skill
 local function assignIncomeFromSkill(skillLevel, count)
@@ -250,7 +272,7 @@ function Population.updateByWeeks(weeksPassed)
     local prevWorking = Population.working
     local prevRetired = Population.retired
     local prevWorkingSkills = Population.getWorkingSkills()
-    local prevRetiredSkills = Population.getRetiredSkills()
+    local prevWorkingIncome = Population.getWorkingIncome()
     
     -- Process each week individually
     for week = 1, weeksPassed do
@@ -370,14 +392,16 @@ function Population.updateByWeeks(weeksPassed)
     
     local currentWorkingSkills = Population.getWorkingSkills()
     local currentRetiredSkills = Population.getRetiredSkills()
+    local currentWorkingIncome = Population.getWorkingIncome()
     
     Population.changes.working_low = currentWorkingSkills.low - prevWorkingSkills.low
     Population.changes.working_medium = currentWorkingSkills.medium - prevWorkingSkills.medium
     Population.changes.working_high = currentWorkingSkills.high - prevWorkingSkills.high
-    
-    Population.changes.retired_low = currentRetiredSkills.low - prevRetiredSkills.low
-    Population.changes.retired_medium = currentRetiredSkills.medium - prevRetiredSkills.medium
-    Population.changes.retired_high = currentRetiredSkills.high - prevRetiredSkills.high
+
+    Population.changes.income_low = currentWorkingIncome.low - prevWorkingIncome.low
+    Population.changes.income_medium = currentWorkingIncome.medium - prevWorkingIncome.medium
+    Population.changes.income_high = currentWorkingIncome.high - prevWorkingIncome.high
+  
 end
 
 -- Get weekly and yearly change rates for display
@@ -405,6 +429,11 @@ function Population.getChanges()
         retired_low_week = Population.changes.retired_low,
         retired_medium_week = Population.changes.retired_medium,
         retired_high_week = Population.changes.retired_high,
+
+        --Income changes
+        income_low_week = Population.changes.income_low,
+        income_medium_week = Population.changes.income_medium,
+        income_high_week = Population.changes.income_high,
     }
 end
 
@@ -464,13 +493,24 @@ function Population.draw(x, y, width, height)
     
     local workingSkills = Population.getWorkingSkills()
     
-    drawRow("├ Low Skill",  workingSkills.low,    c.working_low_week,    100 * c.working_low_week / math.max(workingSkills.low, 1),
+    drawRow("Low Skill",  workingSkills.low,    c.working_low_week,    100 * c.working_low_week / math.max(workingSkills.low, 1),
                                                   c.working_low_week * 52, 100 * c.working_low_week * 52 / math.max(workingSkills.low, 1))
-    drawRow("├ Med Skill",  workingSkills.medium, c.working_medium_week, 100 * c.working_medium_week / math.max(workingSkills.medium, 1),
+    drawRow("Med Skill",  workingSkills.medium, c.working_medium_week, 100 * c.working_medium_week / math.max(workingSkills.medium, 1),
                                                   c.working_medium_week * 52, 100 * c.working_medium_week * 52 / math.max(workingSkills.medium, 1))
-    drawRow("└ High Skill", workingSkills.high,   c.working_high_week,   100 * c.working_high_week / math.max(workingSkills.high, 1),
+    drawRow("High Skill", workingSkills.high,   c.working_high_week,   100 * c.working_high_week / math.max(workingSkills.high, 1),
                                                   c.working_high_week * 52, 100 * c.working_high_week * 52 / math.max(workingSkills.high, 1))
 
+    -- Add income breakdown
+    currentY = currentY + lh * 0.5 -- Half line spacing
+
+    local workingIncome = Population.getWorkingIncome()
+
+    drawRow("Low Income",  workingIncome.low,    c.income_low_week,    100 * c.income_low_week / math.max(workingIncome.low, 1),
+                                                c.income_low_week * 52, 100 * c.income_low_week * 52 / math.max(workingIncome.low, 1))
+    drawRow("Med Income",  workingIncome.medium, c.income_medium_week, 100 * c.income_medium_week / math.max(workingIncome.medium, 1),
+                                                c.income_medium_week * 52, 100 * c.income_medium_week * 52 / math.max(workingIncome.medium, 1))
+    drawRow("High Income", workingIncome.high,   c.income_high_week,   100 * c.income_high_week / math.max(workingIncome.high, 1),
+                                                c.income_high_week * 52, 100 * c.income_high_week * 52 / math.max(workingIncome.high, 1))
 end
 
 return Population
