@@ -15,22 +15,47 @@ Population.incomeDistribution = {
     high = {low = 0.05, medium = 0.36, high = 0.60}
 }
 
+-- Income upgrade thresholds per skill level
+local upgradeThresholds = {
+    low = {
+        { age = 23, income = "low" },
+        { age = 54, income = "medium" },
+        { age = 63, income = "high" }
+    },
+    medium = {
+        { age = 23, income = "low" },
+        { age = 36, income = "medium" },
+        { age = 61, income = "high" }
+    },
+    high = {
+        { age = 23, income = "low" },
+        { age = 25, income = "medium" },
+        { age = 40, income = "high" }
+    }
+}
+
+--unemploymeny
+local unemploymentRate = 0.05
+Population.unemploymentRate = unemploymentRate
+
 -- Initial population counts
 Population.total = 100000
 Population.children = math.floor(Population.total * 0.23)
-Population.students = 0
-Population.working = math.floor(Population.total * 0.60)
+Population.adult = math.floor(Population.total * 0.60)
 Population.retired = math.floor(Population.total * 0.17)
+Population.adult_employed = 0
+Population.adult_unemployed = 0
 
 -- Birth and death rates
 Population.birthrate = 0.035
 local weeksPerYear = 52
 
 -- Aim for ~1% annual population growth
-Population.deathRateMultiplier = 100
+Population.deathRateMultiplier = 0
+
 
 -- Calculate weekly birth rate
-Population.childrenGrowthPerWeek = (Population.birthrate * Population.working) / weeksPerYear
+Population.childrenGrowthPerWeek = (Population.birthrate * Population.adult) / weeksPerYear
 
 -- Accumulator for fractional births
 Population.childrenAcc = 0
@@ -39,7 +64,8 @@ Population.childrenAcc = 0
 local childEndAge = 17         -- 0–17
 local studentStartAge = 18     -- 18–22
 local studentEndAge = 22
-local workingStartAge = 23     -- 23–64
+local adultStartAge = 23     -- 23–64
+local adultEndAge = 64
 local retiredStartAge = 65     -- 65–99
 local deathAge = 99
 
@@ -51,8 +77,8 @@ for age = 0, studentEndAge do
     Population.ageGroups[age] = 0
 end
 
--- Initialize working and retired (23–99) with skill levels
-for age = workingStartAge, deathAge do
+-- Initialize adult and retired (23–99) with skill levels
+for age = adultStartAge, deathAge do
     Population.ageGroups[age] = {
         low = {low = 0, medium = 0, high = 0},
         medium = {low = 0, medium = 0, high = 0},
@@ -69,7 +95,7 @@ end
 -- Set portions
 local childrenPortion = Population.children / (childEndAge + 1)
 local studentPortion = studentCount / (studentEndAge - studentStartAge + 1)
-local workingPortion = Population.working / (retiredStartAge - workingStartAge)
+local adultPortion = Population.adult / (adultEndAge - adultStartAge + 1)
 local retiredPortion = Population.retired / (deathAge - retiredStartAge + 1)
 
 -- Distribute children (0–17)
@@ -77,10 +103,10 @@ for age = 0, childEndAge do
     Population.ageGroups[age] = childrenPortion
 end
 
--- Distribute working adults (23–64) with income distribution
-for age = workingStartAge, retiredStartAge - 1 do
+-- Distribute adult adults (23–64) with income distribution
+for age = adultStartAge, retiredStartAge - 1 do
     for skill, skillRatio in pairs(Population.skillDistribution) do
-        local skillPop = workingPortion * skillRatio
+        local skillPop = adultPortion * skillRatio
         local incDist = Population.incomeDistribution[skill]
         
         Population.ageGroups[age][skill].low = skillPop * incDist.low
@@ -104,12 +130,12 @@ end
 -- Track population changes for display
 Population.changes = {
     children = 0,
-    working = 0,
+    adult = 0,
     retired = 0,
     -- Skill level changes
-    working_low = 0,
-    working_medium = 0,
-    working_high = 0,
+    adult_low = 0,
+    adult_medium = 0,
+    adult_high = 0,
     retired_low = 0,
     retired_medium = 0,
     retired_high = 0,
@@ -117,18 +143,23 @@ Population.changes = {
     income_low = 0,
     income_medium = 0,
     income_high = 0,
+    --unemployment
+    adult_employed = 0,
+    adult_unemployed = 0,
 }
 
 -- Store previous totals
 Population.previousTotal = Population.total
 
+
 --Helper: income function
 function Population.getWorkingIncome()
     local income = {low = 0, medium = 0, high = 0}
-    for age = workingStartAge, retiredStartAge - 1 do
+    for age = adultStartAge, adultEndAge do
         for skill, incomeGroup in pairs(Population.ageGroups[age]) do
             for incomeLevel, count in pairs(incomeGroup) do
-                income[incomeLevel] = income[incomeLevel] + count
+                -- Only count the employed portion
+                income[incomeLevel] = income[incomeLevel] + count * (1 - Population.unemploymentRate)
             end
         end
     end
@@ -176,10 +207,10 @@ local function getAgeGroupTotal(group)
     end
 end
 
--- Helper: get skill breakdown for working population
+-- Helper: get skill breakdown for adult population
 function Population.getWorkingSkills()
     local skills = {low = 0, medium = 0, high = 0}
-    for age = workingStartAge, retiredStartAge - 1 do
+    for age = adultStartAge, retiredStartAge - 1 do
         for skill, incomeGroup in pairs(Population.ageGroups[age]) do
             for income, count in pairs(incomeGroup) do
                 skills[skill] = skills[skill] + count
@@ -212,7 +243,7 @@ end
 
 -- Helper: recalculate aggregate categories from age groups
 function Population.recalculateTotals()
-    local children, students, working, retired = 0, 0, 0, 0
+    local children, students, adult, retired = 0, 0, 0, 0
 
     -- Children (0–17)
     for age = 0, childEndAge do
@@ -225,8 +256,8 @@ function Population.recalculateTotals()
     end
 
     -- Working (23–64)
-    for age = workingStartAge, retiredStartAge - 1 do
-        working = working + getAgeGroupTotal(Population.ageGroups[age])
+    for age = adultStartAge, retiredStartAge - 1 do
+        adult = adult + getAgeGroupTotal(Population.ageGroups[age])
     end
 
     -- Retired (65–99)
@@ -235,10 +266,16 @@ function Population.recalculateTotals()
     end
 
     Population.children = math.floor(children)
-    Population.students = math.floor(students)
-    Population.working = math.floor(working)
+    Population.adult = math.floor(adult)
     Population.retired = math.floor(retired)
-    Population.total = Population.children + Population.students + Population.working + Population.retired
+    Population.total = Population.children + Population.adult + Population.retired
+    -- Split adult into employed and unemployed
+    local adultSkills = Population.getWorkingSkills()
+    local totalAdults = adultSkills.low + adultSkills.medium + adultSkills.high
+
+    Population.adult_employed = math.floor((1 - Population.unemploymentRate) * totalAdults)
+    Population.adult_unemployed = totalAdults - Population.adult_employed
+
 end
 
 -- Helper: assign skill levels to new 18-year-olds
@@ -269,15 +306,18 @@ function Population.updateByWeeks(weeksPassed)
     -- Store previous totals for change calculation
     Population.previousTotal = Population.total
     local prevChildren = Population.children
-    local prevWorking = Population.working
+    local prevWorking = Population.adult
     local prevRetired = Population.retired
     local prevWorkingSkills = Population.getWorkingSkills()
     local prevWorkingIncome = Population.getWorkingIncome()
+    local prevAdultTotal = prevWorkingSkills.low + prevWorkingSkills.medium + prevWorkingSkills.high
+    local prevEmployed = math.floor((1 - Population.unemploymentRate) * prevAdultTotal)
+    local prevUnemployed = prevAdultTotal - prevEmployed
     
     -- Process each week individually
     for week = 1, weeksPassed do
         -- 1. Add new births
-        local childIncrease = (Population.birthrate * Population.working) / weeksPerYear
+        local childIncrease = (Population.birthrate * Population.adult) / weeksPerYear
         Population.childrenAcc = Population.childrenAcc + childIncrease
         local childrenIncreaseInt = math.floor(Population.childrenAcc)
         Population.childrenAcc = Population.childrenAcc - childrenIncreaseInt
@@ -326,7 +366,7 @@ function Population.updateByWeeks(weeksPassed)
         for age = 0, studentEndAge do
             newAgeGroups[age] = 0
         end
-        for age = workingStartAge, deathAge do
+        for age = adultStartAge, deathAge do
             newAgeGroups[age] = {
                 low = {low = 0, medium = 0, high = 0},
                 medium = {low = 0, medium = 0, high = 0},
@@ -361,7 +401,7 @@ function Population.updateByWeeks(weeksPassed)
         end
         
         -- Age adults (23–99)
-        for age = workingStartAge, deathAge do
+        for age = adultStartAge, deathAge do
             local currentGroup = Population.ageGroups[age]
             
             for skill, incomeGroup in pairs(currentGroup) do
@@ -382,27 +422,50 @@ function Population.updateByWeeks(weeksPassed)
         Population.ageGroups = newAgeGroups
     end
     
+    -- 4. Apply income upgrades based on skill and age
+    for age = adultStartAge, adultEndAge do
+        for skill, incomeGroup in pairs(Population.ageGroups[age]) do
+            for _, rule in ipairs(upgradeThresholds[skill]) do
+                if age >= rule.age then
+                    -- Upgrade everyone below target income to that income
+                    for income, count in pairs(incomeGroup) do
+                        local upgradeRanks = { low = 1, medium = 2, high = 3 }
+                        if upgradeRanks[income] < upgradeRanks[rule.income] then
+                            incomeGroup[rule.income] = incomeGroup[rule.income] + count
+                            incomeGroup[income] = 0
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+
+
     -- Recalculate totals
     Population.recalculateTotals()
     
     -- Calculate changes
     Population.changes.children = Population.children - prevChildren
-    Population.changes.working = Population.working - prevWorking
+    Population.changes.adult = Population.adult - prevWorking
     Population.changes.retired = Population.retired - prevRetired
     
     local currentWorkingSkills = Population.getWorkingSkills()
     local currentRetiredSkills = Population.getRetiredSkills()
     local currentWorkingIncome = Population.getWorkingIncome()
     
-    Population.changes.working_low = currentWorkingSkills.low - prevWorkingSkills.low
-    Population.changes.working_medium = currentWorkingSkills.medium - prevWorkingSkills.medium
-    Population.changes.working_high = currentWorkingSkills.high - prevWorkingSkills.high
+    Population.changes.adult_low = currentWorkingSkills.low - prevWorkingSkills.low
+    Population.changes.adult_medium = currentWorkingSkills.medium - prevWorkingSkills.medium
+    Population.changes.adult_high = currentWorkingSkills.high - prevWorkingSkills.high
 
     Population.changes.income_low = currentWorkingIncome.low - prevWorkingIncome.low
     Population.changes.income_medium = currentWorkingIncome.medium - prevWorkingIncome.medium
     Population.changes.income_high = currentWorkingIncome.high - prevWorkingIncome.high
-  
+
+    Population.changes.adult_employed = Population.adult_employed - prevEmployed
+    Population.changes.adult_unemployed = Population.adult_unemployed - prevUnemployed 
 end
+
 
 -- Get weekly and yearly change rates for display
 function Population.getChanges()
@@ -410,22 +473,22 @@ function Population.getChanges()
     return {
         -- Weekly changes
         children_week = Population.changes.children,
-        working_week = Population.changes.working,
+        adult_week = Population.changes.adult,
         retired_week = Population.changes.retired,
         total_week = totalChange,
         total_week_percent = (totalChange / Population.previousTotal) * 100,
         
         -- Yearly projections
         children_year = Population.changes.children * 52,
-        working_year = Population.changes.working * 52,
+        adult_year = Population.changes.adult * 52,
         retired_year = Population.changes.retired * 52,
         total_year = totalChange * 52,
         total_year_percent = ((totalChange * 52) / Population.previousTotal) * 100,
         
         -- Skill level changes
-        working_low_week = Population.changes.working_low,
-        working_medium_week = Population.changes.working_medium,
-        working_high_week = Population.changes.working_high,
+        adult_low_week = Population.changes.adult_low,
+        adult_medium_week = Population.changes.adult_medium,
+        adult_high_week = Population.changes.adult_high,
         retired_low_week = Population.changes.retired_low,
         retired_medium_week = Population.changes.retired_medium,
         retired_high_week = Population.changes.retired_high,
@@ -483,34 +546,35 @@ function Population.draw(x, y, width, height)
     drawRow("Total",    Population.total,   c.total_week,   c.total_week_percent,   c.total_year,   c.total_year_percent)
     drawRow("Children", Population.children, c.children_week, 100 * c.children_week / math.max(Population.children, 1),
                                              c.children_year, 100 * c.children_year / math.max(Population.children, 1))
-    drawRow("Adults",  Population.working,  c.working_week, 100 * c.working_week / math.max(Population.working, 1),
-                                             c.working_year, 100 * c.working_year / math.max(Population.working, 1))
+    drawRow("Adults",  Population.adult,  c.adult_week, 100 * c.adult_week / math.max(Population.adult, 1),
+                                             c.adult_year, 100 * c.adult_year / math.max(Population.adult, 1))
     drawRow("Retired",  Population.retired,  c.retired_week, 100 * c.retired_week / math.max(Population.retired, 1),
                                              c.retired_year, 100 * c.retired_year / math.max(Population.retired, 1))
     
-    -- Add working skill breakdown
+    -- Add adult skill breakdown
     currentY = currentY + lh * 0.5 -- Half line spacing
     
-    local workingSkills = Population.getWorkingSkills()
+    local adultSkills = Population.getWorkingSkills()
     
-    drawRow("Low Skill",  workingSkills.low,    c.working_low_week,    100 * c.working_low_week / math.max(workingSkills.low, 1),
-                                                  c.working_low_week * 52, 100 * c.working_low_week * 52 / math.max(workingSkills.low, 1))
-    drawRow("Med Skill",  workingSkills.medium, c.working_medium_week, 100 * c.working_medium_week / math.max(workingSkills.medium, 1),
-                                                  c.working_medium_week * 52, 100 * c.working_medium_week * 52 / math.max(workingSkills.medium, 1))
-    drawRow("High Skill", workingSkills.high,   c.working_high_week,   100 * c.working_high_week / math.max(workingSkills.high, 1),
-                                                  c.working_high_week * 52, 100 * c.working_high_week * 52 / math.max(workingSkills.high, 1))
+    drawRow("Low Skill",  adultSkills.low,    c.adult_low_week,    100 * c.adult_low_week / math.max(adultSkills.low, 1),
+                                                  c.adult_low_week * 52, 100 * c.adult_low_week * 52 / math.max(adultSkills.low, 1))
+    drawRow("Med Skill",  adultSkills.medium, c.adult_medium_week, 100 * c.adult_medium_week / math.max(adultSkills.medium, 1),
+                                                  c.adult_medium_week * 52, 100 * c.adult_medium_week * 52 / math.max(adultSkills.medium, 1))
+    drawRow("High Skill", adultSkills.high,   c.adult_high_week,   100 * c.adult_high_week / math.max(adultSkills.high, 1),
+                                                  c.adult_high_week * 52, 100 * c.adult_high_week * 52 / math.max(adultSkills.high, 1))
 
     -- Add income breakdown
     currentY = currentY + lh * 0.5 -- Half line spacing
 
-    local workingIncome = Population.getWorkingIncome()
+    local adultIncome = Population.getWorkingIncome()
 
-    drawRow("Low Income",  workingIncome.low,    c.income_low_week,    100 * c.income_low_week / math.max(workingIncome.low, 1),
-                                                c.income_low_week * 52, 100 * c.income_low_week * 52 / math.max(workingIncome.low, 1))
-    drawRow("Med Income",  workingIncome.medium, c.income_medium_week, 100 * c.income_medium_week / math.max(workingIncome.medium, 1),
-                                                c.income_medium_week * 52, 100 * c.income_medium_week * 52 / math.max(workingIncome.medium, 1))
-    drawRow("High Income", workingIncome.high,   c.income_high_week,   100 * c.income_high_week / math.max(workingIncome.high, 1),
-                                                c.income_high_week * 52, 100 * c.income_high_week * 52 / math.max(workingIncome.high, 1))
+    drawRow("Low Income",  adultIncome.low,    c.income_low_week,    100 * c.income_low_week / math.max(adultIncome.low, 1),
+                                                c.income_low_week * 52, 100 * c.income_low_week * 52 / math.max(adultIncome.low, 1))
+    drawRow("Med Income",  adultIncome.medium, c.income_medium_week, 100 * c.income_medium_week / math.max(adultIncome.medium, 1),
+                                                c.income_medium_week * 52, 100 * c.income_medium_week * 52 / math.max(adultIncome.medium, 1))
+    drawRow("High Income", adultIncome.high,   c.income_high_week,   100 * c.income_high_week / math.max(adultIncome.high, 1),
+                                                c.income_high_week * 52, 100 * c.income_high_week * 52 / math.max(adultIncome.high, 1))
+    drawRow("Unemployed", Population.adult_unemployed or 0, c.adult_unemployed or 0, 0, (c.adult_unemployed or 0) * 52, 0)
 end
 
 return Population
