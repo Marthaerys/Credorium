@@ -40,18 +40,18 @@ Population.unemploymentRate = unemploymentRate
 
 -- Initial population counts
 Population.total = 100000
-Population.children = math.floor(Population.total * 0.23)
-Population.adult = math.floor(Population.total * 0.60)
-Population.retired = math.floor(Population.total * 0.17)
+Population.children = math.floor(Population.total * 0.30)
+Population.adult = math.floor(Population.total * 0.45)
+Population.retired = math.floor(Population.total * 0.25)
 Population.adult_employed = 0
 Population.adult_unemployed = 0
 
 -- Birth and death rates
-Population.birthrate = 0.035
+Population.birthrate = 0.07
 local weeksPerYear = 52
 
 -- Aim for ~1% annual population growth
-Population.deathRateMultiplier = 0
+Population.deathRateMultiplier = 10
 
 
 -- Calculate weekly birth rate

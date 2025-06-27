@@ -85,7 +85,7 @@ function Game.update(dt)
     Game.timeCounter = Game.timeCounter + dt
     if Game.timeCounter >= 1 then
         Game.timeCounter = Game.timeCounter - 1
-        Game.day = Game.day + 1
+        Game.day = Game.day + 7
 
         if Game.day > 7 then
             Game.day = 1
