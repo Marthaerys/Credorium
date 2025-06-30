@@ -123,9 +123,12 @@ function love.mousepressed(x, y, button)
 
                 elseif Game.populationButton and Game.populationButton:isHovered(x, y) then
                     Game.uiState = "population"
+
+                elseif Game.economyButton and Game.economyButton:isHovered(x, y) then
+                    Game.uiState = "economy"
                 end
 
-            elseif Game.uiState == "industry" or Game.uiState == "population" then
+            elseif Game.uiState == "industry" or Game.uiState == "population" or Game.uiState == "economy" then
                 if Game.closeButton and Game.closeButton:isHovered(x, y) then
                     Game.uiState = "main"
                 end

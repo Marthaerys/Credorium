@@ -1,7 +1,6 @@
 local Game = {}
 Population = require("population")
-print("Population geladen:", Population, type(Population))
-
+Economy = require("economy")
 
 Game.capital = 1000000
 Game.currency = "BUCKS"
@@ -37,6 +36,7 @@ function Game.load(countryName, currencyName)
     Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
     Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80, function()
     Game.uiState = "population"
+    Game.economyButton = Button:new("Economy", 660, screenY - 100, 200, 80)
 end)
 
 end
@@ -128,8 +128,9 @@ function Game.draw()
         if Game.menuButton then Game.menuButton:draw() end
         if Game.industryButton then Game.industryButton:draw() end
         if Game.populationButton then Game.populationButton:draw() end
+        if Game.econmyButton then Game.economyButton:draw() end
 
-    elseif Game.uiState == "industry" or Game.uiState == "population" then
+    elseif Game.uiState == "industry" or Game.uiState == "population" or Game.uiState == "economy" then
         local width = screenX * 0.9
         local height = screenY * 0.9
         local x = (screenX - width) / 2
