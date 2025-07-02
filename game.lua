@@ -33,12 +33,9 @@ function Game.load(countryName, currencyName)
 
     Game.menuButton = Button:new("Menu", 20, screenY - 100, 200, 80)
     Game.industryButton = Button:new("Industry", 240, screenY - 100, 200, 80)
+    Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80)
+    Game.economyButton = Button:new("Economy", 680, screenY - 100, 200, 80)
     Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
-    Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80, function()
-    Game.uiState = "population"
-    Game.economyButton = Button:new("Economy", 660, screenY - 100, 200, 80)
-end)
-
 end
 
 function Game.loadFromSave()
@@ -54,11 +51,11 @@ function Game.loadFromSave()
 
         Game.menuButton = Button:new("Menu", 20, screenY - 100, 200, 80)
         Game.industryButton = Button:new("Industry", 240, screenY - 100, 200, 80)
+        Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80)
+        Game.economyButton = Button:new("Economy", 680, screenY - 100, 200, 80)
         Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
-        Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80, function()
-        Game.uiState = "population" end)
 
-
+        Game.uiState = "main"  -- Optional but good to reset this explicitly
     end
 end
 
@@ -71,6 +68,8 @@ end
 
 function Game.update(dt)
     local mx, my = love.mouse.getPosition()
+    Economy.update(dt)
+
 
     -- UI updates
     if Game.uiState == "main" then
@@ -80,6 +79,7 @@ function Game.update(dt)
     elseif Game.uiState == "industry" or Game.uiState == "population" then
         if Game.closeButton then Game.closeButton:update(mx, my) end
     end
+    
 
     -- Time simulation
     Game.timeCounter = Game.timeCounter + dt
@@ -128,7 +128,7 @@ function Game.draw()
         if Game.menuButton then Game.menuButton:draw() end
         if Game.industryButton then Game.industryButton:draw() end
         if Game.populationButton then Game.populationButton:draw() end
-        if Game.econmyButton then Game.economyButton:draw() end
+        if Game.economyButton then Game.economyButton:draw() end
 
     elseif Game.uiState == "industry" or Game.uiState == "population" or Game.uiState == "economy" then
         local width = screenX * 0.9
@@ -153,6 +153,12 @@ function Game.draw()
 
             Population.draw(x, y, width)
         end
+
+        if Game.uiState == "economy" then
+            love.graphics.printf("Economic Overview", x, y + 20, width, "center")
+            Economy.draw(x + 50, y + 80)
+        end
+
 
         -- Close button
         if Game.closeButton then
