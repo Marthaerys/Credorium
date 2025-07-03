@@ -1,5 +1,7 @@
 local Game = {}
+
 Population = require("population")
+Industry = require("industry")
 Economy = require("economy")
 
 Game.capital = 1000000
@@ -68,7 +70,7 @@ end
 
 function Game.update(dt)
     local mx, my = love.mouse.getPosition()
-    Economy.update(dt)
+    Industry.updateByWeeks(dt)
 
 
     -- UI updates
@@ -111,6 +113,7 @@ function Game.update(dt)
 
     if weeksPassed > 0 then
         Population.updateByWeeks(weeksPassed)
+        Economy.update(weeksPassed)
         Game.previousWeek = currentWeek
     end
 end
@@ -143,20 +146,15 @@ function Game.draw()
         -- Title and content
         love.graphics.setColor(1, 1, 1)
         if Game.uiState == "industry" then
-            love.graphics.printf("Industry Overview", x, y + 20, width, "center")
-            love.graphics.printf(
-                "Manufacturing output: 1,500 units\nEmployment: 25%\nExports: 300 units",
-                x + 50, y + 80, width - 100, "left"
-            )
+            Industry.draw(x, y, width)
         elseif Game.uiState == "population" then
-            print("Type of Population:", type(Population))
-
             Population.draw(x, y, width)
         end
 
         if Game.uiState == "economy" then
             love.graphics.printf("Economic Overview", x, y + 20, width, "center")
-            Economy.draw(x + 50, y + 80)
+            Economy.draw(x + 50, y + 80, Game.currency)
+
         end
 
 
@@ -190,101 +188,6 @@ function formatMoney(amount)
     return formatted
 end
 
--- Simulated company (placeholder)
-Company = {
-    employees = 100,
-    salary_per_employee = 100,
-    units_produced = 5000,
-    sale_price_per_unit = 5,
-    material_cost_per_unit = 1,
-    loan_balance = 1000000,
-    loan_interest_rate_per_week = 0.0018,
-    assets_value = 6000000,
-    reserves_balance = 100000,
 
-    fixed_costs = 0,
-    asset_depreciation_rate_per_week = 0.001,
-
-    investment_allocation = 0.4,
-    shareholder_dividend_allocation = 0.2,
-    loan_repayment_allocation = 0.2,
-    reserves_allocation = 0.1,
-    wage_increase_allocation = 0.1,
-
-    net_profit = 0,
-    revenue = 0,
-    total_costs = 0,
-}
-
-needs_pyramid = {
-    {
-        level = 1,
-        name = "Basisbehoeften",
-        examples = {
-            "Voedsel",
-            "Water",
-            "Energie (brandstof/stroom)",
-            "Huur / onderdak",
-            "Kleding (minimaal)",
-            "Basale zorg (vaccinaties, eerste hulp)"
-        }
-    },
-    {
-        level = 2,
-        name = "Veiligheid & Zekerheid",
-        examples = {
-            "Woningverbetering / beveiliging",
-            "Zorgverzekering",
-            "Spaarrekening",
-            "Vaste baan / inkomen",
-            "School voor kinderen (basis)",
-            "Transport (fiets, OV)"
-        }
-    },
-    {
-        level = 3,
-        name = "Sociale binding & status",
-        examples = {
-            "Feesten / bruiloften / cadeaus",
-            "Relatievorming / dating / bruidsprijs",
-            "Communicatiemiddelen (telefoon, internet)",
-            "Kleding (modieus)",
-            "Religieuze giften",
-            "Sociale bijdragen (familie steunen)"
-        }
-    },
-    {
-        level = 4,
-        name = "Ontwikkeling & onderwijs",
-        examples = {
-            "Hoger onderwijs / bijles",
-            "Privé-onderwijs voor kinderen",
-            "Computer / boeken",
-            "Talen leren",
-            "Cursussen / certificaten"
-        }
-    },
-    {
-        level = 5,
-        name = "Zelfontplooiing & luxe",
-        examples = {
-            "Vakanties",
-            "Luxe goederen (auto, sieraden)",
-            "Fitness & sportclubs",
-            "Entertainment (games, films, concerten)",
-            "Hobby’s & creativiteit",
-            "Designmeubels"
-        }
-    }
-}
-
-
-function Company:updateWeek()
-    self:calculateRevenue()
-    self:calculateCosts()
-    self:calculateNetProfit()
-    self:distributeProfit()
-    self:adjustStrategy()
-end
 
 return Game
