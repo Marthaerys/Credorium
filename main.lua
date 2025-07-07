@@ -92,7 +92,6 @@ function love.draw()
     end
 end
 
-
 function love.mousepressed(x, y, button)
     if button == 1 then
         if gamestate == "menu" then
@@ -102,7 +101,7 @@ function love.mousepressed(x, y, button)
                         gamestate = "country_select"
                         local buttonWidth = screenX * 0.25
                         local buttonHeight = screenY * 0.1
-                        startButton = Button:new("Start Game", screenX/2 - buttonWidth/2, screenY * 0.7, buttonWidth, buttonHeight)
+                        startButton = Button:new("Start Game", screenX / 2 - buttonWidth / 2, screenY * 0.7, buttonWidth, buttonHeight)
                     elseif btn.text == "Continue" then
                         Game.loadFromSave()
                         gamestate = "game"
@@ -113,26 +112,33 @@ function love.mousepressed(x, y, button)
             end
 
         elseif gamestate == "game" then
-            if Game.uiState == "main" then
-                if Game.menuButton and Game.menuButton:isHovered(x, y) then
-                    Game.save()
-                    gamestate = "menu"
+        -- Always-clickable game buttons
+        if Game.menuButton and Game.menuButton:isHovered(x, y) then
+            Game.save()
+            gamestate = "menu"
+        elseif Game.industryButton and Game.industryButton:isHovered(x, y) then
+            Game.uiState = "industry"
+            Industry.subcategory = "food" -- Reset to default when opening
+        elseif Game.populationButton and Game.populationButton:isHovered(x, y) then
+            Game.uiState = "population"
+        elseif Game.economyButton and Game.economyButton:isHovered(x, y) then
+            Game.uiState = "economy"
+        end
 
-                elseif Game.industryButton and Game.industryButton:isHovered(x, y) then
-                    Game.uiState = "industry"
-
-                elseif Game.populationButton and Game.populationButton:isHovered(x, y) then
-                    Game.uiState = "population"
-
-                elseif Game.economyButton and Game.economyButton:isHovered(x, y) then
-                    Game.uiState = "economy"
-                end
-
-            elseif Game.uiState == "industry" or Game.uiState == "population" or Game.uiState == "economy" then
-                if Game.closeButton and Game.closeButton:isHovered(x, y) then
-                    Game.uiState = "main"
-                end
+        -- Subcategory clicks
+        if Game.uiState == "industry" then
+            if Industry.foodButton and Industry.foodButton:isHovered(x, y) then
+                Industry.subcategory = "food"
+            elseif Industry.clothingButton and Industry.clothingButton:isHovered(x, y) then
+                Industry.subcategory = "clothing"
             end
+        end
+
+    -- Close popup
+    if Game.uiState ~= "main" and Game.closeButton and Game.closeButton:isHovered(x, y) then
+        Game.uiState = "main"
+    end
+
 
         elseif gamestate == "country_select" then
             local fieldW = screenX * 0.25

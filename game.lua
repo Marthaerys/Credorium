@@ -72,14 +72,15 @@ function Game.update(dt)
     local mx, my = love.mouse.getPosition()
     Industry.updateByWeeks(dt)
 
+    -- ✅ Always update bottom buttons
+    if Game.menuButton then Game.menuButton:update(mx, my) end
+    if Game.industryButton then Game.industryButton:update(mx, my) end
+    if Game.populationButton then Game.populationButton:update(mx, my) end
+    if Game.economyButton then Game.economyButton:update(mx, my) end
 
-    -- UI updates
-    if Game.uiState == "main" then
-        if Game.menuButton then Game.menuButton:update(mx, my) end
-        if Game.industryButton then Game.industryButton:update(mx, my) end
-        if Game.populationButton then Game.populationButton:update(mx, my) end
-    elseif Game.uiState == "industry" or Game.uiState == "population" then
-        if Game.closeButton then Game.closeButton:update(mx, my) end
+    -- ✅ Only update the close button when a panel is open
+    if Game.uiState ~= "main" and Game.closeButton then
+        Game.closeButton:update(mx, my)
     end
     
 
@@ -127,15 +128,16 @@ function Game.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(formatMoney(Game.capital) .. " " .. Game.currency, 20, 20)
 
-    if Game.uiState == "main" then
-        if Game.menuButton then Game.menuButton:draw() end
-        if Game.industryButton then Game.industryButton:draw() end
-        if Game.populationButton then Game.populationButton:draw() end
-        if Game.economyButton then Game.economyButton:draw() end
+    -- ✅ Always draw bottom buttons
+    if Game.menuButton then Game.menuButton:draw() end
+    if Game.industryButton then Game.industryButton:draw() end
+    if Game.populationButton then Game.populationButton:draw() end
+    if Game.economyButton then Game.economyButton:draw() end
 
-    elseif Game.uiState == "industry" or Game.uiState == "population" or Game.uiState == "economy" then
+    -- ✅ Draw active UI overlay
+    if Game.uiState ~= "main" then
         local width = screenX * 0.9
-        local height = screenY * 0.9
+        local height = screenY * 0.85
         local x = (screenX - width) / 2
         local y = (screenY - height) / 2
 
@@ -143,20 +145,16 @@ function Game.draw()
         love.graphics.setColor(0.2, 0.2, 0.2, 0.9)
         love.graphics.rectangle("fill", x, y, width, height, 12, 12)
 
-        -- Title and content
         love.graphics.setColor(1, 1, 1)
         if Game.uiState == "industry" then
+            Industry.loadButtons(x, y, width, height)
             Industry.draw(x, y, width)
         elseif Game.uiState == "population" then
             Population.draw(x, y, width)
-        end
-
-        if Game.uiState == "economy" then
+        elseif Game.uiState == "economy" then
             love.graphics.printf("Economic Overview", x, y + 20, width, "center")
             Economy.draw(x + 50, y + 80, Game.currency)
-
         end
-
 
         -- Close button
         if Game.closeButton then
@@ -166,14 +164,14 @@ function Game.draw()
         end
     end
 
-
-    -- Day/week/year in top right
+    -- Day/week/year
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf(
         " Day: " .. Game.day .. "  Week: " .. Game.week .. "  Year: " .. Game.year,
         0, 20, screenX - 20, "right"
     )
 end
+
 
 
 
