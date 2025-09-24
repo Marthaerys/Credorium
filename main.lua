@@ -14,14 +14,23 @@ local inputFields = {
     currency = { text = "", active = false, y = 0 },
 }
 
+local fontLarge
+local fontMedium
+local fontSmall
+
 function love.load()
     love.window.setTitle("Credorium")
     love.window.setMode(0, 0, { fullscreen = true })
 
     screenX, screenY = love.graphics.getDimensions()
 
-    font = love.graphics.newFont("assets/font/Source_Serif_4/static/SourceSerif4-Light.ttf", math.floor(screenY * 0.04))
-    love.graphics.setFont(font)
+    -- Laad verschillende groottes van dezelfde font
+    fontLarge  = love.graphics.newFont("assets/font/Source_Serif_4/static/SourceSerif4-Light.ttf", math.floor(screenY * 0.05))
+    fontMedium = love.graphics.newFont("assets/font/Source_Serif_4/static/SourceSerif4-Light.ttf", math.floor(screenY * 0.03))
+    fontSmall  = love.graphics.newFont("assets/font/Source_Serif_4/static/SourceSerif4-Light.ttf", math.floor(screenY * 0.02))
+
+    -- Zet een standaard font (bv. medium)
+    love.graphics.setFont(fontMedium)
 
     local centerX = screenX / 2
     local startY = screenY / 3
@@ -37,6 +46,7 @@ function love.load()
     inputFields.country.y = screenY * 0.3
     inputFields.currency.y = screenY * 0.4
 end
+
 
 function love.resize(w, h)
     screenX, screenY = w, h
