@@ -1,7 +1,7 @@
 local Game = {}
 
 Population = require("population")
-Industry = require("industry")
+Industry = require("industry/industry")
 Economy = require("economy")
 
 Game.capital = 1000000
@@ -35,8 +35,8 @@ function Game.load(countryName, currencyName)
 
     Game.menuButton = Button:new("Menu", 20, screenY - 100, 200, 80)
     Game.industryButton = Button:new("Industry", 240, screenY - 100, 200, 80)
-    Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80)
-    Game.economyButton = Button:new("Economy", 680, screenY - 100, 200, 80)
+    Game.populationButton = Button:new("Population", 460, screenY - 100, 300, 80)
+    Game.economyButton = Button:new("Economy", 800, screenY - 100, 200, 80)
     Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
 end
 
@@ -53,8 +53,8 @@ function Game.loadFromSave()
 
         Game.menuButton = Button:new("Menu", 20, screenY - 100, 200, 80)
         Game.industryButton = Button:new("Industry", 240, screenY - 100, 200, 80)
-        Game.populationButton = Button:new("Population", 460, screenY - 100, 200, 80)
-        Game.economyButton = Button:new("Economy", 680, screenY - 100, 200, 80)
+        Game.populationButton = Button:new("Population", 460, screenY - 100, 300, 80)
+        Game.economyButton = Button:new("Economy", 800, screenY - 100, 200, 80)
         Game.closeButton = Button:new("Close", screenX / 2 - 100, screenY / 2 + 100, 200, 80)
 
         Game.uiState = "main"  -- Optional but good to reset this explicitly

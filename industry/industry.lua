@@ -1,15 +1,28 @@
 local Industry = {}
 
-Industry.subcategory = "food"  -- Default
+Industry.subcategory = "food"
 Industry.foodButton = nil
 Industry.clothingButton = nil
 Industry.luxuryButton = nil
 
+local Food = require("industry/food")
+local Clothing = require("industry/clothing")
+local Luxury = require("industry/luxury")
+
+function Industry.updateByWeeks(weeks)
+    if Industry.subcategory == "food" then
+        Food.updateByWeeks(weeks)
+    elseif Industry.subcategory == "clothing" then
+        Clothing.updateByWeeks(weeks)
+    elseif Industry.subcategory == "luxury" then
+        Luxury.updateByWeeks(weeks)
+    end
+end
+
 function Industry.loadButtons(panelX, panelY, panelWidth, panelHeight)
     local Button = require("ui/button")
-
-    -- Position near bottom left of popup
     local buttonY = panelY + panelHeight - 100
+
     Industry.foodButton = Button:new("Food", panelX + 50, buttonY, 250, 80)
     Industry.clothingButton = Button:new("Clothing", panelX + 350, buttonY, 250, 80)
     Industry.luxuryButton = Button:new("Luxury", panelX + 650, buttonY, 250, 80)
@@ -27,28 +40,14 @@ function Industry.draw(x, y, width)
     -- Show data based on subcategory
     local info = ""
     if Industry.subcategory == "food" then
-        info = string.format(
-            " Food Sector\nManufacturing output: %d units\nEmployment: %.0f%%\nExports: %d units",
-            Industry.manufacturingOutput or 0,
-            (Industry.employmentRate or 0) * 100,
-            Industry.exports or 0
-        )
+        info = Food.getInfo()
     elseif Industry.subcategory == "clothing" then
-        info = string.format(
-            " Clothing Sector\nFactories: 20\nEmployment: %.0f%%\nExports: %d garments",
-            (Industry.employmentRate or 0) * 100,
-            (Industry.exports or 0) + 100
-        )
+        info = Clothing.getInfo()
     elseif Industry.subcategory == "luxury" then
-        info = " Luxury Sector\n"  -- geen format nodig als het leeg is
+        info = Luxury.getInfo()
     end
 
-
     love.graphics.printf(info, x + 50, y + 130, width - 100, "left")
-end
-
-function Industry.updateByWeeks(weeks)
-    -- Simulate dynamic changes here
 end
 
 return Industry
