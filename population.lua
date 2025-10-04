@@ -440,7 +440,8 @@ function Population.updateByWeeks(weeksPassed)
         end
     end
 
-
+    -- Caluclate demands
+    Population.foodDemand = (Population.children * 8) + (Population.adult * 1) + (Population.retired * 0.7)
 
     -- Recalculate totals
     Population.recalculateTotals()

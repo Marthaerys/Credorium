@@ -114,11 +114,11 @@ function Game.update(dt)
 
     if weeksPassed > 0 then
         Population.updateByWeeks(weeksPassed)
+        Industry.updateByWeeks(weeksPassed)
         Economy.update(weeksPassed)
         Game.previousWeek = currentWeek
     end
 end
-
 
 
 function Game.draw()

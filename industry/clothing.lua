@@ -1,12 +1,9 @@
 local Clothing = {}
 
+function Clothing.updateByWeeks() end
 
-function Clothing.updateByWeeks()
-    
-end
-
-function Clothing.getInfo()
-    return " Clothing Sector\n(coming soon…)"
+function Clothing.draw(x, y, width)
+    love.graphics.print("Clothing sector (dummy data)", x, y)
 end
 
 return Clothing

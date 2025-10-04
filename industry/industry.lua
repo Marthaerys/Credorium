@@ -9,14 +9,11 @@ local Food = require("industry/food")
 local Clothing = require("industry/clothing")
 local Luxury = require("industry/luxury")
 
-function Industry.updateByWeeks(weeks)
-    if Industry.subcategory == "food" then
-        Food.updateByWeeks(weeks)
-    elseif Industry.subcategory == "clothing" then
-        Clothing.updateByWeeks(weeks)
-    elseif Industry.subcategory == "luxury" then
-        Luxury.updateByWeeks(weeks)
-    end
+
+function Industry.updateByWeeks(weeksPassed)
+    Food.updateByWeeks(weeksPassed)
+    Clothing.updateByWeeks()
+    Luxury.updateByWeeks()
 end
 
 function Industry.loadButtons(panelX, panelY, panelWidth, panelHeight)
@@ -37,17 +34,14 @@ function Industry.draw(x, y, width)
     if Industry.clothingButton then Industry.clothingButton:draw() end
     if Industry.luxuryButton then Industry.luxuryButton:draw() end
 
-    -- Show data based on subcategory
-    local info = ""
+    -- Delegate drawing to the active sub-sector
     if Industry.subcategory == "food" then
-        info = Food.getInfo()
+        Food.draw(x + 50, y + 130, width - 100)
     elseif Industry.subcategory == "clothing" then
-        info = Clothing.getInfo()
+        Clothing.draw(x + 50, y + 130, width - 100)
     elseif Industry.subcategory == "luxury" then
-        info = Luxury.getInfo()
+        Luxury.draw(x + 50, y + 130, width - 100)
     end
-
-    love.graphics.printf(info, x + 50, y + 130, width - 100, "left")
 end
 
 return Industry
