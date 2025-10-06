@@ -3,15 +3,10 @@ local Food = {}
 -- === Input variables (base state) ===
 Food.employees = 10000
 Food.employeeSalary = 1000       -- per week, per werknemer
-Food.unitsProduced = 100000
-
+Food.produced = 80000
 Food.variableCostPerUnit = 1
-Food.desiredDemand = 0
-Food.needFactor = 0.95
-Food.salePrice = 105    
-Food.budgetReq = Food.desiredDemand * Food.salePrice
-Food.availBudget = 1200
 
+Food.salePrice = 105    
 Food.inventory = 100
 
 Food.loans = 100000              -- totaal geleend bedrag
@@ -59,19 +54,21 @@ Food.weeklySales = {}
 
 function Food.updateByWeeks(weeksPassed)
     for week = 1, weeksPassed do
-        -- general updates 
-        Food.budgetReq = Food.desiredDemand * Food.salePrice
-        Food.availBudget = Food.budgetReq
+        -- supply and demand
+        Food.demand = Population.foodDemand
+        Food.sold = math.min(Food.demand, Food.produced + Food.inventory)
+        Food.salePrice = Food.salePrice*(1 + (0.1 * (Food.demand - Food.produced)/Food.produced))
+
 
         -- Kosten
         Food.costs.employee = Food.employees * Food.employeeSalary * weeksPassed
-        Food.costs.material = Food.unitsProduced * Food.variableCostPerUnit * weeksPassed
+        Food.costs.material = Food.produced * Food.variableCostPerUnit * weeksPassed
         Food.costs.interest = Food.loans * Food.interestRate * weeksPassed
         Food.costs.total = Food.costs.employee + Food.costs.material + Food.costs.interest
 
-        -- Inkomsten (per week, niet geschaald)
-        Food.sales = Population.foodDemand
-        Food.weeklyRevenue = Food.sales * Food.salePrice
+       
+        --Food.sales = Population.foodDemand
+        Food.weeklyRevenue = Food.sold * Food.salePrice
 
         for i = 1, weeksPassed do
             table.insert(Food.weeklySales, Food.weeklyRevenue)
@@ -110,16 +107,17 @@ function Food.draw(x, y, width)
     local lineHeight = 80
     local lines = {
         string.format("Employees: %d", Food.employees),
-        string.format("Salary/employee: %.2f", Food.employeeSalary),
-        string.format("Units produced: %d", Food.unitsProduced),
+        string.format("Salary/employee: %d", Food.employeeSalary),
+        string.format("Food production: %d", Food.produced),
+        string.format("Food demand: %d", Food.demand),
         string.format("Inventory: %d", Food.inventory),
-        string.format("Sale price/unit: %.2f", Food.salePrice),
+        string.format("Sale price/unit: %d", Food.salePrice),
         string.format("Weekly revenue: %d", Food.weeklyRevenue or 0),
-        string.format("Total costs: %.2f", Food.costs.total or 0),
-        string.format("Profit: %.2f", Food.profit or 0),
-        string.format("Loans: %.2f", Food.loans),
-        string.format("Assets: %.2f", Food.assets),
-        string.format("Reserves: %.2f", Food.reserves),
+        string.format("Total costs: %d", Food.costs.total or 0),
+        string.format("Profit: %d", Food.profit or 0),
+        --string.format("Loans: %d", Food.loans),
+        --string.format("Assets: %d", Food.assets),
+        --string.format("Reserves: %d", Food.reserves),
     }
 
     for i, line in ipairs(lines) do

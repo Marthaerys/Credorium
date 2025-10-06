@@ -448,7 +448,7 @@ function Population.updateByWeeks(weeksPassed)
 
     -- SUPPLY AND DEMAND
     Population.totalAvailBudget = Food.availBudget --Add more later
-    Population.foodDemand = (Population.children * 8) + (Population.adult * 1) + (Population.retired * 0.7)
+    Population.foodDemand = (Population.children * 0.8) + (Population.adult * 1) + (Population.retired * 0.7)
 
     -- Recalculate totals
     Population.recalculateTotals()
