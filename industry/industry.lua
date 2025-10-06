@@ -37,6 +37,7 @@ function Industry.draw(x, y, width)
     -- Delegate drawing to the active sub-sector
     if Industry.subcategory == "food" then
         Food.draw(x + 50, y + 130, width - 100)
+        Food.drawGraph(1500, 800, 400, 400)
     elseif Industry.subcategory == "clothing" then
         Clothing.draw(x + 50, y + 130, width - 100)
     elseif Industry.subcategory == "luxury" then

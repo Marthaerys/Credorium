@@ -4,9 +4,15 @@ local Food = {}
 Food.employees = 10000
 Food.employeeSalary = 1000       -- per week, per werknemer
 Food.unitsProduced = 100000
-Food.salePrice = 105             -- per unit
+
 Food.variableCostPerUnit = 1
-Food.sales = Population.foodDemand
+Food.desiredDemand = 0
+Food.needFactor = 0.95
+Food.salePrice = 105    
+Food.budgetReq = Food.desiredDemand * Food.salePrice
+Food.availBudget = 1200
+
+Food.inventory = 100
 
 Food.loans = 100000              -- totaal geleend bedrag
 Food.interestRate = 0.0018       -- 0.18% per week
@@ -46,12 +52,16 @@ Food.distribution = { -- actual amounts calculated later
     wageIncrease = 0,
 }
 
+-- Plotting
+Food.weeklySales = {}
+
 -- === Functions ===
 
 function Food.updateByWeeks(weeksPassed)
     for week = 1, weeksPassed do
-
-       Food.sales = Population.foodDemand
+        -- general updates 
+        Food.budgetReq = Food.desiredDemand * Food.salePrice
+        Food.availBudget = Food.budgetReq
 
         -- Kosten
         Food.costs.employee = Food.employees * Food.employeeSalary * weeksPassed
@@ -60,10 +70,20 @@ function Food.updateByWeeks(weeksPassed)
         Food.costs.total = Food.costs.employee + Food.costs.material + Food.costs.interest
 
         -- Inkomsten (per week, niet geschaald)
-        Food.income.sales = Food.sales * Food.salePrice
+        Food.sales = Population.foodDemand
+        Food.weeklyRevenue = Food.sales * Food.salePrice
+
+        for i = 1, weeksPassed do
+            table.insert(Food.weeklySales, Food.weeklyRevenue)
+
+            -- Houd de tabel beperkt tot de laatste 52 weken
+            if #Food.weeklySales > 52 then
+                table.remove(Food.weeklySales, 1)
+            end
+        end
 
         -- Winst (geschaald met weeksPassed)
-        Food.profit = (Food.income.sales - Food.costs.total) * weeksPassed
+        Food.profit = (Food.weeklyRevenue - Food.costs.total) * weeksPassed
 
         -- Afschrijving (exponentieel i.p.v. lineair)
         Food.assets = Food.assets * ((1 - Food.assetWriteOffRate) ^ weeksPassed)
@@ -87,13 +107,14 @@ function Food.updateByWeeks(weeksPassed)
 end
 
 function Food.draw(x, y, width)
-    local lineHeight = 100
+    local lineHeight = 80
     local lines = {
         string.format("Employees: %d", Food.employees),
         string.format("Salary/employee: %.2f", Food.employeeSalary),
         string.format("Units produced: %d", Food.unitsProduced),
+        string.format("Inventory: %d", Food.inventory),
         string.format("Sale price/unit: %.2f", Food.salePrice),
-        string.format("Total sales: %d", Food.income.sales or 0),
+        string.format("Weekly revenue: %d", Food.weeklyRevenue or 0),
         string.format("Total costs: %.2f", Food.costs.total or 0),
         string.format("Profit: %.2f", Food.profit or 0),
         string.format("Loans: %.2f", Food.loans),
@@ -106,6 +127,35 @@ function Food.draw(x, y, width)
     end
 end
 
+function Food.drawGraph(x, y, width, height)
+    if #Food.weeklySales < 2 then return end
+
+    -- Bepaal schaal
+    local maxRevenue = 0
+    for _, val in ipairs(Food.weeklySales) do
+        if val > maxRevenue then
+            maxRevenue = val
+        end
+    end
+    if maxRevenue == 0 then maxRevenue = 1 end  -- voorkom deling door 0
+
+    -- Tekenen van assen
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.line(x, y + height, x + width, y + height) -- X-as
+    love.graphics.line(x, y, x, y + height) -- Y-as
+
+    -- Teken de lijn
+    love.graphics.setColor(0, 1, 0)
+    local step = width / math.max(1, (#Food.weeklySales - 1))
+
+    for i = 1, #Food.weeklySales - 1 do
+        local x1 = x + (i - 1) * step
+        local y1 = y + height - (Food.weeklySales[i] / maxRevenue) * height
+        local x2 = x + i * step
+        local y2 = y + height - (Food.weeklySales[i + 1] / maxRevenue) * height
+        love.graphics.line(x1, y1, x2, y2)
+    end
+end
 
 
 return Food

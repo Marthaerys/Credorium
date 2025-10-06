@@ -1,5 +1,11 @@
 -- population version 5.0 - with skill levels (FIXED)
 local Population = {}
+local Food = require("industry/food")
+
+
+-- Budgeting
+Population.totalAvailBudget = 1200
+
 
 -- Skill level distribution for new workers (when turning 18)
 Population.skillDistribution = {
@@ -440,7 +446,8 @@ function Population.updateByWeeks(weeksPassed)
         end
     end
 
-    -- Caluclate demands
+    -- SUPPLY AND DEMAND
+    Population.totalAvailBudget = Food.availBudget --Add more later
     Population.foodDemand = (Population.children * 8) + (Population.adult * 1) + (Population.retired * 0.7)
 
     -- Recalculate totals
