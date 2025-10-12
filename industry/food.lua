@@ -1,12 +1,14 @@
 local Food = {}
 local util = require("util")
+local Population = require("population")
 
 -- === Input variables (base state) ===
-Food.employees = 10000
+Food.employees = 1000
 Food.employeeSalary = 1000       -- per week, per werknemer
-Food.produced = 80000
+Food.produced = 9000
 Food.variableCostPerUnit = 1
 
+Food.demand = Population.foodDemand
 Food.salePrice = 105    
 Food.inventory = 100000
 
@@ -17,7 +19,11 @@ Food.assets = 1000000            -- totale waarde activa
 Food.assetWriteOffRate = 0.001   -- 0.10% per week
 Food.reserves = 100000
 
--- === Outputs (calculated each week) ===
+Food.weeklySold = 0
+Food.weeklyRevenue = 0
+Food.weeklySales = {} -- als je die tabel ook gebruikt
+
+
 Food.costs = {
     employee = 0,
     material = 0,
@@ -51,80 +57,58 @@ Food.distribution = { -- actual amounts calculated later
 -- Plotting
 Food.weeklySales = {}
 
--- === Functions ===
-
-function Food.updateByWeeks(weeksPassed)
-    for week = 1, weeksPassed do
-        -- Supply and demand
+-- Daily updates for prices, inventory, demand
+function Food.updateDaily(daysPassed)
+    for i = 1, daysPassed do
         Food.demand = Population.foodDemand
-        Food.sold = math.min(Food.demand, Food.produced + Food.inventory)
+        Food.soldToday = math.min(Food.demand, Food.produced + Food.inventory)
+        Food.inventory = Food.inventory + (Food.produced - Food.soldToday)
 
-        -- Update inventory bij tekort of overschot
-        local shortage = Food.demand - Food.produced
-
-        if shortage > 0 then
-            -- Er is meer vraag dan aanbod
-            if Food.inventory >= shortage then
-                Food.inventory = Food.inventory - shortage
-            else
-                -- Inventory raakt op, alles wordt verkocht
-                Food.inventory = 0
-            end
-        else
-            -- Er is een overschot (meer productie dan vraag)
-            Food.inventory = Food.inventory + math.abs(shortage)
-        end
-
-        -- Dynamische prijsaanpassing op basis van mismatch tussen vraag en aanbod
+        -- Prijs aanpassen
         if Food.produced > 0 then
             local imbalance = (Food.demand - Food.produced) / Food.produced
             Food.salePrice = Food.salePrice * (1 + 0.1 * imbalance)
         end
 
-        
+        -- Verkoop optellen voor week
+        Food.weeklySold = Food.weeklySold + Food.soldToday
+        Food.weeklyRevenue = Food.weeklyRevenue + (Food.soldToday * Food.salePrice)
+    end
+end
 
+
+-- weekly updates for investments, production change
+function Food.updateByWeeks(weeksPassed)
+    for week = 1, weeksPassed do
         -- Kosten
-        Food.costs.employee = Food.employees * Food.employeeSalary * weeksPassed
-        Food.costs.material = Food.produced * Food.variableCostPerUnit * weeksPassed
-        Food.costs.interest = Food.loans * Food.interestRate * weeksPassed
+        Food.costs.employee = Food.employees * Food.employeeSalary
+        Food.costs.material = Food.weeklySold * Food.variableCostPerUnit
+        Food.costs.interest = Food.loans * Food.interestRate
         Food.costs.total = Food.costs.employee + Food.costs.material + Food.costs.interest
 
-       
-        --Food.sales = Population.foodDemand
-        Food.weeklyRevenue = Food.sold * Food.salePrice
+        -- Winst
+        Food.profit = Food.weeklyRevenue - Food.costs.total
 
-        for i = 1, weeksPassed do
-            table.insert(Food.weeklySales, Food.weeklyRevenue)
+        -- Afschrijving
+        Food.assets = Food.assets * ((1 - Food.assetWriteOffRate) ^ 1)
 
-            -- Houd de tabel beperkt tot de laatste 52 weken
-            if #Food.weeklySales > 52 then
-                table.remove(Food.weeklySales, 1)
+        -- Winstverdeling
+        if Food.profit > 0 then
+            for k, v in pairs(Food.profitDistribution) do
+                Food.distribution[k] = Food.profit * v
             end
         end
 
-        -- Winst (geschaald met weeksPassed)
-        Food.profit = (Food.weeklyRevenue - Food.costs.total) * weeksPassed
+        -- Toevoegen aan weekgeschiedenis
+        table.insert(Food.weeklySales, Food.weeklyRevenue)
+        if #Food.weeklySales > 52 then table.remove(Food.weeklySales, 1) end
 
-        -- Afschrijving (exponentieel i.p.v. lineair)
-        Food.assets = Food.assets * ((1 - Food.assetWriteOffRate) ^ weeksPassed)
-
-        -- Winstverdeling (geen extra * weeksPassed!)
-        Food.distribution.investments = Food.profit * Food.profitDistribution.investments
-        Food.distribution.shareholders = Food.profit * Food.profitDistribution.shareholders
-        Food.distribution.loanRepayment = Food.profit * Food.profitDistribution.loanRepayment
-        Food.distribution.reserves = Food.profit * Food.profitDistribution.reserves
-        Food.distribution.wageIncrease = Food.profit * Food.profitDistribution.wageIncrease
-
-            -- Winstverdeling
-            if Food.profit > 0 then
-                Food.distribution.investments = Food.profit * Food.profitDistribution.investments
-                Food.distribution.shareholders = Food.profit * Food.profitDistribution.shareholders
-                Food.distribution.loanRepayment = Food.profit * Food.profitDistribution.loanRepayment
-                Food.distribution.reserves = Food.profit * Food.profitDistribution.reserves
-                Food.distribution.wageIncrease = Food.profit * Food.profitDistribution.wageIncrease
-            end
-        end
+        -- Reset weekcijfers
+        Food.weeklySold = 0
+        Food.weeklyRevenue = 0
+    end
 end
+
 
 function Food.draw(x, y, width, currency)
     local lineHeight = 80
@@ -135,7 +119,7 @@ function Food.draw(x, y, width, currency)
         string.format("Employees: %d", Food.employees),
         string.format("Salary/employee: %s%s", util.formatMoney(Food.employeeSalary), symbol),
         string.format("Food production: %d", Food.produced),
-        string.format("Food demand: %d", Food.demand),
+        string.format("Food demand/day: %d", Food.demand or 0),
         string.format("Inventory: %d", Food.inventory),
         string.format("Sale price/unit: %s%s", util.formatMoney(Food.salePrice), symbol),
         string.format("Weekly revenue: %s%s", util.formatMoney(Food.weeklyRevenue or 0), symbol),

@@ -1,6 +1,5 @@
 -- population version 5.0 - with skill levels (FIXED)
 local Population = {}
-local Food = require("industry/food")
 
 
 -- Budgeting
@@ -45,7 +44,7 @@ local unemploymentRate = 0.05
 Population.unemploymentRate = unemploymentRate
 
 -- Initial population counts
-Population.total = 100000
+Population.total = 10000
 Population.children = math.floor(Population.total * 0.30)
 Population.adult = math.floor(Population.total * 0.45)
 Population.retired = math.floor(Population.total * 0.25)
@@ -447,7 +446,6 @@ function Population.updateByWeeks(weeksPassed)
     end
 
     -- SUPPLY AND DEMAND
-    Population.totalAvailBudget = Food.availBudget --Add more later
     Population.foodDemand = (Population.children * 0.8) + (Population.adult * 1) + (Population.retired * 0.7)
 
     -- Recalculate totals

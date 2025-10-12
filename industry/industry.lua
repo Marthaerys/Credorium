@@ -10,6 +10,9 @@ local Food = require("industry/food")
 local Clothing = require("industry/clothing")
 local Luxury = require("industry/luxury")
 
+function Industry.updateDaily(daysPassed)
+    Food.updateDaily(daysPassed)
+end
 
 function Industry.updateByWeeks(weeksPassed)
     Food.updateByWeeks(weeksPassed)
