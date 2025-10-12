@@ -148,13 +148,14 @@ function Game.draw()
         love.graphics.setColor(1, 1, 1)
         if Game.uiState == "industry" then
             Industry.loadButtons(x, y, width, height)
-            Industry.draw(x, y, width)
+            Industry.draw(x, y, width, Game.currency) -- ✅ currency doorgeven
         elseif Game.uiState == "population" then
-            Population.draw(x, y, width)
+            Population.draw(x, y, width, Game.currency) -- (optioneel, als je dat later ook gebruikt)
         elseif Game.uiState == "economy" then
             love.graphics.printf("Economic Overview", x, y + 20, width, "center")
             Economy.draw(x + 50, y + 80, Game.currency)
         end
+
 
         -- Close button
         if Game.closeButton then

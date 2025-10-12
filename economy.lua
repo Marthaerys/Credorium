@@ -1,5 +1,6 @@
 local Population = require("population")
 local util = require("util")
+
 local Economy = {}
 
 -- Wages per week?

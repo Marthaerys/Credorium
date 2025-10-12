@@ -1,4 +1,5 @@
 local Industry = {}
+local util = require("util")
 
 Industry.subcategory = "food"
 Industry.foodButton = nil
@@ -25,7 +26,7 @@ function Industry.loadButtons(panelX, panelY, panelWidth, panelHeight)
     Industry.luxuryButton = Button:new("Luxury", panelX + 650, buttonY, 250, 80)
 end
 
-function Industry.draw(x, y, width)
+function Industry.draw(x, y, width, currency)
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Industry Overview", x, y + 20, width, "center")
 
@@ -36,12 +37,12 @@ function Industry.draw(x, y, width)
 
     -- Delegate drawing to the active sub-sector
     if Industry.subcategory == "food" then
-        Food.draw(x + 50, y + 130, width - 100)
+        Food.draw(x + 50, y + 130, width - 100, currency)
         Food.drawGraph(1500, 800, 400, 400)
     elseif Industry.subcategory == "clothing" then
-        Clothing.draw(x + 50, y + 130, width - 100)
+        Clothing.draw(x + 50, y + 130, width - 100, currency)
     elseif Industry.subcategory == "luxury" then
-        Luxury.draw(x + 50, y + 130, width - 100)
+        Luxury.draw(x + 50, y + 130, width - 100, currency)
     end
 end
 

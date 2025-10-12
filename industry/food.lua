@@ -1,4 +1,5 @@
 local Food = {}
+local util = require("util")
 
 -- === Input variables (base state) ===
 Food.employees = 10000
@@ -7,7 +8,7 @@ Food.produced = 80000
 Food.variableCostPerUnit = 1
 
 Food.salePrice = 105    
-Food.inventory = 100
+Food.inventory = 100000
 
 Food.loans = 100000              -- totaal geleend bedrag
 Food.interestRate = 0.0018       -- 0.18% per week
@@ -54,11 +55,33 @@ Food.weeklySales = {}
 
 function Food.updateByWeeks(weeksPassed)
     for week = 1, weeksPassed do
-        -- supply and demand
+        -- Supply and demand
         Food.demand = Population.foodDemand
         Food.sold = math.min(Food.demand, Food.produced + Food.inventory)
-        Food.salePrice = Food.salePrice*(1 + (0.1 * (Food.demand - Food.produced)/Food.produced))
 
+        -- Update inventory bij tekort of overschot
+        local shortage = Food.demand - Food.produced
+
+        if shortage > 0 then
+            -- Er is meer vraag dan aanbod
+            if Food.inventory >= shortage then
+                Food.inventory = Food.inventory - shortage
+            else
+                -- Inventory raakt op, alles wordt verkocht
+                Food.inventory = 0
+            end
+        else
+            -- Er is een overschot (meer productie dan vraag)
+            Food.inventory = Food.inventory + math.abs(shortage)
+        end
+
+        -- Dynamische prijsaanpassing op basis van mismatch tussen vraag en aanbod
+        if Food.produced > 0 then
+            local imbalance = (Food.demand - Food.produced) / Food.produced
+            Food.salePrice = Food.salePrice * (1 + 0.1 * imbalance)
+        end
+
+        
 
         -- Kosten
         Food.costs.employee = Food.employees * Food.employeeSalary * weeksPassed
@@ -103,18 +126,21 @@ function Food.updateByWeeks(weeksPassed)
         end
 end
 
-function Food.draw(x, y, width)
+function Food.draw(x, y, width, currency)
     local lineHeight = 80
+    love.graphics.setColor(1, 1, 1)
+    local symbol = currency and (" $" .. currency) or ""
     local lines = {
+    
         string.format("Employees: %d", Food.employees),
-        string.format("Salary/employee: %d", Food.employeeSalary),
+        string.format("Salary/employee: %s%s", util.formatMoney(Food.employeeSalary), symbol),
         string.format("Food production: %d", Food.produced),
         string.format("Food demand: %d", Food.demand),
         string.format("Inventory: %d", Food.inventory),
-        string.format("Sale price/unit: %d", Food.salePrice),
-        string.format("Weekly revenue: %d", Food.weeklyRevenue or 0),
-        string.format("Total costs: %d", Food.costs.total or 0),
-        string.format("Profit: %d", Food.profit or 0),
+        string.format("Sale price/unit: %s%s", util.formatMoney(Food.salePrice), symbol),
+        string.format("Weekly revenue: %s%s", util.formatMoney(Food.weeklyRevenue or 0), symbol),
+        string.format("Total costs: %s%s", util.formatMoney(Food.costs.total or 0), symbol),
+        string.format("Profit: %s%s", util.formatMoney(Food.profit or 0), symbol),
         --string.format("Loans: %d", Food.loans),
         --string.format("Assets: %d", Food.assets),
         --string.format("Reserves: %d", Food.reserves),
