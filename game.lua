@@ -89,8 +89,10 @@ function Game.update(dt)
     if Game.timeCounter >= 1 then
         Game.timeCounter = Game.timeCounter - 1
         Game.day = Game.day + 1
+        
+        Industry.updateDaily(1)
 
-        if Game.day > 7 then
+        if Game.day >= 7 then
             Game.day = 1
             Game.week = Game.week + 1
 

@@ -1,14 +1,15 @@
 local Industry = {}
 local util = require("util")
+local Food = require("industry/food")
+local Clothing = require("industry/clothing")
+local Luxury = require("industry/luxury")
 
 Industry.subcategory = "food"
 Industry.foodButton = nil
 Industry.clothingButton = nil
 Industry.luxuryButton = nil
 
-local Food = require("industry/food")
-local Clothing = require("industry/clothing")
-local Luxury = require("industry/luxury")
+
 
 function Industry.updateDaily(daysPassed)
     Food.updateDaily(daysPassed)

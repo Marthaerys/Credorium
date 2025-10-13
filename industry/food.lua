@@ -4,25 +4,29 @@ local Population = require("population")
 
 -- === Input variables (base state) ===
 Food.employees = 1000
-Food.employeeSalary = 1000       -- per week, per werknemer
-Food.produced = 9000
+Food.employeeSalary = 700       -- per week, per werknemer
+Food.producedDaily = 1200   -- daily
 Food.variableCostPerUnit = 1
 
-Food.demand = Population.foodDemand
+
+Food.demandDaily = Population.foodDemand
 Food.salePrice = 105    
-Food.inventory = 100000
+Food.inventory = 5000
 
 Food.loans = 100000              -- totaal geleend bedrag
 Food.interestRate = 0.0018       -- 0.18% per week
 
-Food.assets = 1000000            -- totale waarde activa
+Food.assets = 100000            -- totale waarde activa
 Food.assetWriteOffRate = 0.001   -- 0.10% per week
-Food.reserves = 100000
+Food.reserves = 10000
 
 Food.weeklySold = 0
 Food.weeklyRevenue = 0
 Food.weeklySales = {} -- als je die tabel ook gebruikt
 
+--investements
+Food.productionLevel = 1
+Food.investmentCost = 1000
 
 Food.costs = {
     employee = 0,
@@ -35,7 +39,7 @@ Food.income = {
     sales = 0,-- Bereken food demand
 }
 
-Food.profit = 0
+Food.weeklyProfit = 0
 
 -- === Profit distribution percentages ===
 Food.profitDistribution = {
@@ -46,7 +50,7 @@ Food.profitDistribution = {
     wageIncrease = 0.15,
 }
 
-Food.distribution = { -- actual amounts calculated later
+Food.funds = {
     investments = 0,
     shareholders = 0,
     loanRepayment = 0,
@@ -54,30 +58,31 @@ Food.distribution = { -- actual amounts calculated later
     wageIncrease = 0,
 }
 
+
 -- Plotting
 Food.weeklySales = {}
 
 -- Daily updates for prices, inventory, demand
 function Food.updateDaily(daysPassed)
     for i = 1, daysPassed do
-        Food.demand = Population.foodDemand
-        Food.soldToday = math.min(Food.demand, Food.produced + Food.inventory)
-        Food.inventory = Food.inventory + (Food.produced - Food.soldToday)
+        Food.demandDaily = Population.foodDemand / 7
+        Food.soldToday = math.min(Food.demandDaily, Food.producedDaily + Food.inventory)
+        Food.inventory = Food.inventory + (Food.producedDaily - Food.soldToday)
+        Food.inventoryRatio = Food.inventory/Food.producedDaily -- ratio of invetory to production
 
         -- Prijs aanpassen
-        if Food.produced > 0 then
-            local imbalance = (Food.demand - Food.produced) / Food.produced
+        if Food.producedDaily > 0 then
+            local imbalance = (Food.demandDaily - Food.producedDaily) / Food.producedDaily
             Food.salePrice = Food.salePrice * (1 + 0.1 * imbalance)
         end
 
-        -- Verkoop optellen voor week
+        -- ✅ Tel de omzet en verkoop op in weektotaal
         Food.weeklySold = Food.weeklySold + Food.soldToday
         Food.weeklyRevenue = Food.weeklyRevenue + (Food.soldToday * Food.salePrice)
     end
 end
 
 
--- weekly updates for investments, production change
 function Food.updateByWeeks(weeksPassed)
     for week = 1, weeksPassed do
         -- Kosten
@@ -87,27 +92,49 @@ function Food.updateByWeeks(weeksPassed)
         Food.costs.total = Food.costs.employee + Food.costs.material + Food.costs.interest
 
         -- Winst
-        Food.profit = Food.weeklyRevenue - Food.costs.total
-
-        -- Afschrijving
-        Food.assets = Food.assets * ((1 - Food.assetWriteOffRate) ^ 1)
+        Food.weeklyProfit = Food.weeklyRevenue - Food.costs.total
 
         -- Winstverdeling
-        if Food.profit > 0 then
+        if Food.weeklyProfit > 0 then
+            Food.weeklyDistribution = {}
             for k, v in pairs(Food.profitDistribution) do
-                Food.distribution[k] = Food.profit * v
+                local amount = Food.weeklyProfit * v
+                Food.weeklyDistribution[k] = amount
+                Food.funds[k] = (Food.funds[k] or 0) + amount
+            end
+        else
+            Food.weeklyDistribution = {}
+            for k in pairs(Food.profitDistribution) do
+                Food.weeklyDistribution[k] = 0
             end
         end
 
-        -- Toevoegen aan weekgeschiedenis
+        -- ✅ Sla de revenue van deze week op
+        Food.lastWeekRevenue = Food.weeklyRevenue
+
+        -- Eventueel: hou een jaaroverzicht bij
         table.insert(Food.weeklySales, Food.weeklyRevenue)
-        if #Food.weeklySales > 52 then table.remove(Food.weeklySales, 1) end
+        if #Food.weeklySales > 52 then
+            table.remove(Food.weeklySales, 1)
+        end
 
         -- Reset weekcijfers
         Food.weeklySold = 0
         Food.weeklyRevenue = 0
+
+        -- assets updating
+        Food.assetWriteOff = Food.assets*Food.assetWriteOffRate
+        Food.assets = Food.assets + Food.funds.reserves - Food.assetWriteOff -- increase by reserves and by investments made minus write off
+
+        -- investemetns
+        if Food.funds.investments > 100 then
+            Food.productionLevel = Food.productionLevel + 1
+        end
+
+
     end
 end
+
 
 
 function Food.draw(x, y, width, currency)
@@ -117,16 +144,17 @@ function Food.draw(x, y, width, currency)
     local lines = {
     
         string.format("Employees: %d", Food.employees),
-        string.format("Salary/employee: %s%s", util.formatMoney(Food.employeeSalary), symbol),
-        string.format("Food production: %d", Food.produced),
-        string.format("Food demand/day: %d", Food.demand or 0),
+        string.format("Employee salary/Week: %s%s", util.formatMoney(Food.employeeSalary), symbol),
+        string.format("Food production/day: %d", Food.producedDaily),
+        string.format("Food demand/day: %d", Food.demandDaily or 0),
         string.format("Inventory: %d", Food.inventory),
-        string.format("Sale price/unit: %s%s", util.formatMoney(Food.salePrice), symbol),
-        string.format("Weekly revenue: %s%s", util.formatMoney(Food.weeklyRevenue or 0), symbol),
-        string.format("Total costs: %s%s", util.formatMoney(Food.costs.total or 0), symbol),
-        string.format("Profit: %s%s", util.formatMoney(Food.profit or 0), symbol),
+        string.format("Sale price/pc: %s%s", util.formatMoney(Food.salePrice), symbol),
+        string.format("Weekly revenue: %s%s", util.formatMoney(Food.lastWeekRevenue or 0), symbol),
+        string.format("Weekly cost: %s%s", util.formatMoney(Food.costs.total or 0), symbol),
+        string.format("Weekly profit: %s%s", util.formatMoney(Food.weeklyProfit or 0), symbol),
+        string.format("Investments: %s%s", util.formatMoney(Food.funds.investments or 0), symbol),
+        string.format("Assets: %s%s", util.formatMoney(Food.assets or 0), symbol),
         --string.format("Loans: %d", Food.loans),
-        --string.format("Assets: %d", Food.assets),
         --string.format("Reserves: %d", Food.reserves),
     }
 
