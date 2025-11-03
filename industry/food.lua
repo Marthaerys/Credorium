@@ -2,6 +2,8 @@ local Food = {}
 local util = require("util")
 local Population = require("population")
 
+
+
 -- === Input variables (base state) ===
 Food.employees = 1000
 Food.employeeSalary = 700       -- per week, per werknemer
@@ -138,24 +140,26 @@ end
 
 
 function Food.draw(x, y, width, currency)
-    local lineHeight = 80
-    love.graphics.setColor(1, 1, 1)
+    local lineHeight = 40
     local symbol = currency and (" $" .. currency) or ""
+
+    -- Achtergrond van het infopaneel (halftransparant)
+    love.graphics.setColor(0, 0, 0, 0.25)
+    love.graphics.rectangle("fill", x - 20, y - 20, width + 40, 10 * lineHeight + 40, 12)
+
+    -- Tekstkleur (zacht wit)
+    love.graphics.setColor(0.95, 0.98, 0.98)
+
     local lines = {
-    
         string.format("Employees: %d", Food.employees),
-        string.format("Employee salary/Week: %s%s", util.formatMoney(Food.employeeSalary), symbol),
-        string.format("Food production/day: %d", Food.producedDaily),
-        string.format("Food demand/day: %d", Food.demandDaily or 0),
+        string.format("Salary/Week: %s%s", util.formatMoney(Food.employeeSalary), symbol),
+        string.format("Production/day: %d", Food.producedDaily),
         string.format("Inventory: %d", Food.inventory),
-        string.format("Sale price/pc: %s%s", util.formatMoney(Food.salePrice), symbol),
+        string.format("Sale price: %s%s", util.formatMoney(Food.salePrice), symbol),
         string.format("Weekly revenue: %s%s", util.formatMoney(Food.lastWeekRevenue or 0), symbol),
-        string.format("Weekly cost: %s%s", util.formatMoney(Food.costs.total or 0), symbol),
         string.format("Weekly profit: %s%s", util.formatMoney(Food.weeklyProfit or 0), symbol),
         string.format("Investments: %s%s", util.formatMoney(Food.funds.investments or 0), symbol),
         string.format("Assets: %s%s", util.formatMoney(Food.assets or 0), symbol),
-        --string.format("Loans: %d", Food.loans),
-        --string.format("Reserves: %d", Food.reserves),
     }
 
     for i, line in ipairs(lines) do
@@ -163,25 +167,26 @@ function Food.draw(x, y, width, currency)
     end
 end
 
+
 function Food.drawGraph(x, y, width, height)
     if #Food.weeklySales < 2 then return end
 
-    -- Bepaal schaal
+    -- Max schaal
     local maxRevenue = 0
     for _, val in ipairs(Food.weeklySales) do
         if val > maxRevenue then
             maxRevenue = val
         end
     end
-    if maxRevenue == 0 then maxRevenue = 1 end  -- voorkom deling door 0
+    if maxRevenue == 0 then maxRevenue = 1 end
 
-    -- Tekenen van assen
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.line(x, y + height, x + width, y + height) -- X-as
-    love.graphics.line(x, y, x, y + height) -- Y-as
+    -- Aslijnen in zacht wit
+    love.graphics.setColor(0.9, 0.95, 0.95)
+    love.graphics.line(x, y + height, x + width, y + height)
+    love.graphics.line(x, y, x, y + height)
 
-    -- Teken de lijn
-    love.graphics.setColor(0, 1, 0)
+    -- Groene lijn iets zachter maken
+    love.graphics.setColor(0.2, 0.9, 0.5)
     local step = width / math.max(1, (#Food.weeklySales - 1))
 
     for i = 1, #Food.weeklySales - 1 do
@@ -190,6 +195,57 @@ function Food.drawGraph(x, y, width, height)
         local x2 = x + i * step
         local y2 = y + height - (Food.weeklySales[i + 1] / maxRevenue) * height
         love.graphics.line(x1, y1, x2, y2)
+    end
+
+    -- Eventueel zachte schaduw onder de lijn
+    love.graphics.setColor(0.2, 0.9, 0.5, 0.2)
+    for i = 1, #Food.weeklySales - 1 do
+        local x1 = x + (i - 1) * step
+        local y1 = y + height - (Food.weeklySales[i] / maxRevenue) * height
+        local x2 = x + i * step
+        local y2 = y + height - (Food.weeklySales[i + 1] / maxRevenue) * height
+        love.graphics.line(x1, y1 + 2, x2, y2 + 2)
+    end
+end
+
+
+function Food.drawGraph(x, y, width, height)
+    if #Food.weeklySales < 2 then return end
+
+    -- Max schaal
+    local maxRevenue = 0
+    for _, val in ipairs(Food.weeklySales) do
+        if val > maxRevenue then
+            maxRevenue = val
+        end
+    end
+    if maxRevenue == 0 then maxRevenue = 1 end
+
+    -- Aslijnen in zacht wit
+    love.graphics.setColor(0.9, 0.95, 0.95)
+    love.graphics.line(x, y + height, x + width, y + height)
+    love.graphics.line(x, y, x, y + height)
+
+    -- Groene lijn iets zachter maken
+    love.graphics.setColor(0.2, 0.9, 0.5)
+    local step = width / math.max(1, (#Food.weeklySales - 1))
+
+    for i = 1, #Food.weeklySales - 1 do
+        local x1 = x + (i - 1) * step
+        local y1 = y + height - (Food.weeklySales[i] / maxRevenue) * height
+        local x2 = x + i * step
+        local y2 = y + height - (Food.weeklySales[i + 1] / maxRevenue) * height
+        love.graphics.line(x1, y1, x2, y2)
+    end
+
+    -- Eventueel zachte schaduw onder de lijn
+    love.graphics.setColor(0.2, 0.9, 0.5, 0.2)
+    for i = 1, #Food.weeklySales - 1 do
+        local x1 = x + (i - 1) * step
+        local y1 = y + height - (Food.weeklySales[i] / maxRevenue) * height
+        local x2 = x + i * step
+        local y2 = y + height - (Food.weeklySales[i + 1] / maxRevenue) * height
+        love.graphics.line(x1, y1 + 2, x2, y2 + 2)
     end
 end
 

@@ -1,6 +1,7 @@
 local Button = require("ui/button")
 local Game = require("game")
-
+local util = require("util")
+local Food = require("industry.food")
 
 local buttons = {}
 local startButton = nil
@@ -72,8 +73,10 @@ function love.update(dt)
 end
 
 function love.draw()
-    love.graphics.clear(0.1, 0.1, 0.1)
-    love.graphics.setColor(1, 1, 1)
+    util.drawBackground()
+    --Food.draw(100, 100, 400, "")
+    --Food.drawGraph(800, 100, 600, 400)
+
 
     if gamestate == "menu" then
         love.graphics.printf("Credorium", 0, screenY * 0.1, screenX, "center")
