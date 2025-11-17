@@ -69,7 +69,7 @@ function Food.updateDaily(daysPassed)
     for i = 1, daysPassed do
         Food.demandDaily = Population.foodDemand / 7
         Food.soldToday = math.min(Food.demandDaily, Food.producedDaily + Food.inventory)
-        Food.inventory = Food.inventory + (Food.producedDaily - Food.soldToday)
+        Food.inventory = math.max(0, math.floor(Food.inventory))
         Food.inventoryRatio = Food.inventory/Food.producedDaily -- ratio of invetory to production
 
         -- Prijs aanpassen
@@ -129,8 +129,10 @@ function Food.updateByWeeks(weeksPassed)
         Food.assets = Food.assets + Food.funds.reserves - Food.assetWriteOff -- increase by reserves and by investments made minus write off
 
         -- investemetns
-        if Food.funds.investments > 100 then
+        if Food.funds.investments > 10000*Food.productionLevel then
+            Food.funds.investments = Food.funds.investments - 10000*Food.productionLevel
             Food.productionLevel = Food.productionLevel + 1
+            Food.producedDaily = Food.producedDaily*1.10 -- increase production capacity 10% everytime
         end
 
 
@@ -140,30 +142,53 @@ end
 
 
 function Food.draw(x, y, width, currency)
-    local lineHeight = 40
-    local symbol = currency and (" $" .. currency) or ""
+    local lineHeight = 70
+    local currencySymbol = currency and (" $" .. currency) or ""
 
-    -- Tekstkleur
-    love.graphics.setColor(util.colors.text)
+    -- panel dimensions
+    local rows = 9
+    local padding = 100
+    local panelX = x - 20
+    local panelY = y - 20
+    local panelW = width + 10
+    local panelH = rows * lineHeight + padding * 2
 
-    local lines = {
-        string.format("Employees: %d", Food.employees),
-        string.format("Salary/Week: %s%s", util.formatMoney(Food.employeeSalary), symbol),
-        string.format("Production/day: %d", Food.producedDaily),
-        string.format("Inventory: %d", Food.inventory),
-        string.format("Sale price: %s%s", util.formatMoney(Food.salePrice), symbol),
-        string.format("Weekly revenue: %s%s", util.formatMoney(Food.lastWeekRevenue or 0), symbol),
-        string.format("Weekly profit: %s%s", util.formatMoney(Food.weeklyProfit or 0), symbol),
-        string.format("Investments: %s%s", util.formatMoney(Food.funds.investments or 0), symbol),
-        string.format("Assets: %s%s", util.formatMoney(Food.assets or 0), symbol),
+
+    -- prepare rows as {label, value, symbol}
+    local rowsData = {
+        {"Employees", tostring(Food.employees), ""},
+        {"Salary/Week", util.formatMoney(Food.employeeSalary), currency and currencySymbol or ""},
+        {"Production/day", tostring(Food.producedDaily), "Lvl " .. tostring(Food.productionLevel)},
+        {"Demand/day", util.formatMoney(Food.demandDaily or 0), currency and currencySymbol or ""},
+        {"Sale price", util.formatMoney(Food.salePrice), currency and currencySymbol or ""},
+        {"Weekly revenue", util.formatMoney(Food.lastWeekRevenue or 0), currency and currencySymbol or ""},
+        {"Weekly profit", util.formatMoney(Food.weeklyProfit or 0), currency and currencySymbol or ""},
+        {"Investments", util.formatMoney(Food.funds.investments or 0), currency and currencySymbol or ""},
+        {"Assets", util.formatMoney(Food.assets or 0), currency and currencySymbol or ""},
     }
 
-    for i, line in ipairs(lines) do
-        love.graphics.print(line, x, y + (i - 1) * lineHeight)
+    -- text color
+    love.graphics.setColor(
+        util.colors.text[1],
+        util.colors.text[2],
+        util.colors.text[3],
+        util.colors.text[4] or 1
+    )
+
+    -- column positions (simple 3-column layout)
+    local col1X = x
+    local col2X = x + math.floor(width * 0.2)
+    local col3X = x + math.floor(width * 0.28)
+    local textY = panelY + padding
+
+    -- draw rows
+    for i, pair in ipairs(rowsData) do
+        local label, value, sym = pair[1], pair[2], pair[3]
+        love.graphics.print(label .. ":", col1X, textY + (i - 1) * lineHeight)
+        love.graphics.print(value, col2X, textY + (i - 1) * lineHeight)
+        love.graphics.print(sym, col3X, textY + (i - 1) * lineHeight)
     end
 end
-
-
 
 function Food.drawGraph(x, y, width, height)
     if #Food.weeklySales < 2 then return end
