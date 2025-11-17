@@ -1,4 +1,3 @@
--- util.lua
 local util = {}
 
 function util.formatMoney(amount)
@@ -11,20 +10,39 @@ function util.formatMoney(amount)
     return formatted
 end
 
-function util.drawBackground()
-    love.graphics.clear(0.4, 0.8, 0.85)  
-end
+-- ensure unpack works across Lua versions
+local _unpack = table.unpack or unpack
 
-colors = {
-    background = {0.4, 0.8, 0.85},
-    window = {0.92, 0.96, 0.97},
-    border = {0.2, 0.5, 0.55},
-    text = {0.1, 0.1, 0.1},
-    button = {0.3, 0.7, 0.75},
-    buttonHover = {0.35, 0.75, 0.8},
-    buttonDisabled = {0.7, 0.85, 0.87},
-    accent = {0.95, 0.7, 0.2},
+util.colors = {
+    background = {0.737, 0.416, 0.235},  
+    window     = {0.776, 0.596, 0.455}, -- wood colour
+    border     = {0.10, 0.14, 0.16},
+    text       = {0.92, 0.96, 0.97}, -- zacht wit
+    button      = {0.35, 0.70, 0.75},
+    buttonHover = {0.42, 0.76, 0.80},
+    buttonDisabled = {0.65, 0.80, 0.85},
+    accent      = {0.95, 0.70, 0.20}
 }
 
+
+function util.drawWindow(x, y, w, h)
+    -- shadow
+    love.graphics.setColor(0, 0, 0, 0.15)
+    love.graphics.rectangle("fill", x + 4, y + 4, w, h, 12, 12)
+
+    -- window background
+    love.graphics.setColor(util.colors.window)
+    love.graphics.rectangle("fill", x, y, w, h, 12, 12)
+
+    -- border
+    love.graphics.setColor(util.colors.border)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", x, y, w, h, 12, 12)
+end
+
+
+function util.drawBackground()
+    love.graphics.clear(_unpack(util.colors.background))
+end
 
 return util

@@ -1,5 +1,5 @@
 local Game = {}
-
+local util = require("util")
 Population = require("population")
 Industry = require("industry/industry")
 Economy = require("economy")
@@ -126,40 +126,61 @@ end
 function Game.draw()
     local screenX, screenY = love.graphics.getDimensions()
 
-    -- Capital display
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.print(formatMoney(Game.capital) .. " " .. Game.currency, 20, 20)
+    ---------------------------------------------------------
+    -- 1. Achtergrond tekenen met util
+    ---------------------------------------------------------
+    util.drawBackground()
 
-    -- ✅ Always draw bottom buttons
+    ---------------------------------------------------------
+    -- 2. Capital rechtsboven
+    ---------------------------------------------------------
+    love.graphics.setColor(util.colors.text)
+    love.graphics.print(
+        formatMoney(Game.capital) .. " " .. Game.currency,
+        20, 20
+    )
+
+    ---------------------------------------------------------
+    -- 3. Altijd de bottom buttons tekenen
+    ---------------------------------------------------------
     if Game.menuButton then Game.menuButton:draw() end
     if Game.industryButton then Game.industryButton:draw() end
     if Game.populationButton then Game.populationButton:draw() end
     if Game.economyButton then Game.economyButton:draw() end
 
-    -- ✅ Draw active UI overlay
+    ---------------------------------------------------------
+    -- 4. UI overlay (industry / population / economy)
+    ---------------------------------------------------------
     if Game.uiState ~= "main" then
-        local width = screenX * 0.9
+        local width  = screenX * 0.90
         local height = screenY * 0.85
         local x = (screenX - width) / 2
         local y = (screenY - height) / 2
 
-        -- Background panel
-        love.graphics.setColor(0.2, 0.2, 0.2, 0.9)
-        love.graphics.rectangle("fill", x, y, width, height, 12, 12)
+        -- ✨ Gebruik util.drawWindow!
+        util.drawWindow(x, y, width, height)
 
-        love.graphics.setColor(1, 1, 1)
+        -- Tekstkleur instellen
+        love.graphics.setColor(util.colors.text)
+
+        -- ✨ Teken de juiste UI module
         if Game.uiState == "industry" then
             Industry.loadButtons(x, y, width, height)
-            Industry.draw(x, y, width, Game.currency) -- ✅ currency doorgeven
+            Industry.draw(x, y, width, Game.currency)
+
         elseif Game.uiState == "population" then
-            Population.draw(x, y, width, Game.currency) -- (optioneel, als je dat later ook gebruikt)
+            Population.draw(x, y, width, Game.currency)
+
         elseif Game.uiState == "economy" then
-            love.graphics.printf("Economic Overview", x, y + 20, width, "center")
+            love.graphics.printf("Economic Overview",
+                x, y + 20, width, "center"
+            )
             Economy.draw(x + 50, y + 80, Game.currency)
         end
 
-
-        -- Close button
+        -----------------------------------------------------
+        -- Close button (positie vernieuwen)
+        -----------------------------------------------------
         if Game.closeButton then
             Game.closeButton.x = x + (width / 2) - (Game.closeButton.width / 2)
             Game.closeButton.y = y + height - Game.closeButton.height - 40
@@ -167,10 +188,12 @@ function Game.draw()
         end
     end
 
-    -- Day/week/year
-    love.graphics.setColor(1, 1, 1)
+    ---------------------------------------------------------
+    -- 5. Datum rechtsboven
+    ---------------------------------------------------------
+    love.graphics.setColor(util.colors.text)
     love.graphics.printf(
-        " Day: " .. Game.day .. "  Week: " .. Game.week .. "  Year: " .. Game.year,
+        "Day: " .. Game.day .. "   Week: " .. Game.week .. "   Year: " .. Game.year,
         0, 20, screenX - 20, "right"
     )
 end

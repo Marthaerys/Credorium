@@ -143,12 +143,8 @@ function Food.draw(x, y, width, currency)
     local lineHeight = 40
     local symbol = currency and (" $" .. currency) or ""
 
-    -- Achtergrond van het infopaneel (halftransparant)
-    love.graphics.setColor(0, 0, 0, 0.25)
-    love.graphics.rectangle("fill", x - 20, y - 20, width + 40, 10 * lineHeight + 40, 12)
-
-    -- Tekstkleur (zacht wit)
-    love.graphics.setColor(0.95, 0.98, 0.98)
+    -- Tekstkleur
+    love.graphics.setColor(util.colors.text)
 
     local lines = {
         string.format("Employees: %d", Food.employees),
@@ -166,6 +162,7 @@ function Food.draw(x, y, width, currency)
         love.graphics.print(line, x, y + (i - 1) * lineHeight)
     end
 end
+
 
 
 function Food.drawGraph(x, y, width, height)

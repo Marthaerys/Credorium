@@ -31,7 +31,7 @@ end
 
 
 function Economy.draw(x, y, currency)
-    love.graphics.setColor(1, 1, 1)
+    love.graphics.setColor(util.colors.text)
 
     local symbol = " $" .. currency  -- e.g., " $BUCKS"
 
