@@ -200,7 +200,6 @@ end
 
 
 
-
 -- Helper function
 function formatMoney(amount)
     local formatted = string.format("%.0f", amount)
